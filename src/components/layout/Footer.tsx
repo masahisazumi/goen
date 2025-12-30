@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Heart, Instagram, Twitter } from "lucide-react";
+import { Truck, Instagram, Twitter } from "lucide-react";
 
 const footerLinks = {
   service: [
@@ -29,16 +29,16 @@ export function Footer() {
           {/* Brand */}
           <div className="lg:col-span-1">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
-                <Heart className="h-5 w-5 text-primary-foreground" fill="currentColor" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
+                <Truck className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-semibold text-warm-brown">goen</span>
+              <span className="text-xl font-bold text-warm-brown">goen</span>
             </Link>
             <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
-              出店者と場所をつなぐ、<br />
-              あたたかいご縁のマッチングサービス。<br />
-              あなたの「やりたい」を、<br />
-              素敵な場所で叶えましょう。
+              キッチンカーと出店場所をつなぐ、<br />
+              ビジネスマッチングサービス。<br />
+              あなたのキッチンカービジネスを<br />
+              成功へ導きます。
             </p>
             <div className="mt-6 flex gap-4">
               <Link
@@ -109,7 +109,7 @@ export function Footer() {
         </div>
 
         {/* Trust Message */}
-        <div className="mt-12 rounded-2xl bg-dusty-pink-light/50 p-6 text-center">
+        <div className="mt-12 rounded-2xl bg-fresh-green-light/50 p-6 text-center border border-fresh-green/20">
           <p className="text-sm text-warm-brown">
             goenは、安心・安全なマッチングを心がけています。<br />
             本人確認済みユーザーのみが利用でき、トラブル時のサポート体制も整っています。
@@ -122,7 +122,7 @@ export function Footer() {
             &copy; {new Date().getFullYear()} goen. All rights reserved.
           </p>
           <p className="text-xs text-muted-foreground">
-            Made with love for creators and space owners
+            キッチンカーオーナーとスペースオーナーのために
           </p>
         </div>
       </div>

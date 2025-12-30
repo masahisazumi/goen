@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Menu, X, User, MessageCircle, Search, Heart } from "lucide-react";
+import { Menu, X, User, MessageCircle, Search, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
@@ -32,10 +32,10 @@ export function Header({ isLoggedIn = false }: HeaderProps) {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
-            <Heart className="h-5 w-5 text-primary-foreground" fill="currentColor" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
+            <Truck className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-semibold text-warm-brown">goen</span>
+          <span className="text-xl font-bold text-warm-brown">goen</span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -70,7 +70,7 @@ export function Header({ isLoggedIn = false }: HeaderProps) {
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                     <Avatar className="h-9 w-9">
                       <AvatarImage src="/avatars/user.jpg" alt="ユーザー" />
-                      <AvatarFallback className="bg-dusty-pink-light text-dusty-pink">
+                      <AvatarFallback className="bg-food-orange-light text-food-orange">
                         <User className="h-4 w-4" />
                       </AvatarFallback>
                     </Avatar>
@@ -122,10 +122,10 @@ export function Header({ isLoggedIn = false }: HeaderProps) {
           <SheetContent side="right" className="w-[300px] sm:w-[350px]">
             <div className="flex flex-col gap-6 pt-6">
               <Link href="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
-                  <Heart className="h-5 w-5 text-primary-foreground" fill="currentColor" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
+                  <Truck className="h-5 w-5 text-primary-foreground" />
                 </div>
-                <span className="text-xl font-semibold text-warm-brown">goen</span>
+                <span className="text-xl font-bold text-warm-brown">goen</span>
               </Link>
 
               <nav className="flex flex-col gap-4">

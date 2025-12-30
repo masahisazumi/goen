@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Star, Heart } from "lucide-react";
+import { MapPin, Star, Bookmark } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,7 @@ export function ProfileCard({
   const href = type === "vendor" ? `/vendor/${id}` : `/space/${id}`;
 
   return (
-    <Card className="group overflow-hidden rounded-2xl border-0 shadow-sm transition-all hover:shadow-md bg-card">
+    <Card className="group overflow-hidden rounded-2xl border border-border shadow-sm transition-all hover:shadow-md bg-card">
       <div className="relative aspect-[4/3] overflow-hidden">
         <Link href={href}>
           <Image
@@ -57,7 +57,7 @@ export function ProfileCard({
           )}
           onClick={onFavoriteClick}
         >
-          <Heart
+          <Bookmark
             className={cn("h-5 w-5", isFavorite && "fill-current")}
           />
         </Button>
@@ -81,7 +81,7 @@ export function ProfileCard({
             </h3>
             {rating && (
               <div className="flex items-center gap-1 text-sm shrink-0">
-                <Star className="h-4 w-4 fill-soft-coral text-soft-coral" />
+                <Star className="h-4 w-4 fill-sunny-yellow text-sunny-yellow" />
                 <span className="font-medium">{rating.toFixed(1)}</span>
                 {reviewCount && (
                   <span className="text-muted-foreground">({reviewCount})</span>
