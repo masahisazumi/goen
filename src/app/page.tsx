@@ -184,7 +184,7 @@ export default function HomePage() {
                   })}
                 </div>
 
-                <div className="mt-10">
+                <div className="mt-10 flex flex-col sm:flex-row gap-3">
                   <Button
                     size="lg"
                     className="rounded-full bg-primary hover:bg-primary/90 px-8"
@@ -193,6 +193,16 @@ export default function HomePage() {
                     <Link href="/search?type=space">
                       出店先を探す
                       <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="rounded-full border-2 border-primary text-primary hover:bg-primary/10 px-8"
+                    asChild
+                  >
+                    <Link href="/register?type=vendor">
+                      出店者として登録
                     </Link>
                   </Button>
                 </div>
@@ -234,7 +244,7 @@ export default function HomePage() {
                   })}
                 </div>
 
-                <div className="mt-10">
+                <div className="mt-10 flex flex-col sm:flex-row gap-3">
                   <Button
                     size="lg"
                     className="rounded-full bg-white text-gray-900 hover:bg-gray-100 px-8"
@@ -243,6 +253,16 @@ export default function HomePage() {
                     <Link href="/search?type=vendor">
                       出店者を探す
                       <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="rounded-full border-2 border-white text-white hover:bg-white/10 px-8"
+                    asChild
+                  >
+                    <Link href="/register?type=owner">
+                      スペースを提供する
                     </Link>
                   </Button>
                 </div>

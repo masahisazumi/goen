@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Truck, Eye, EyeOff, ArrowRight, Store, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,10 +13,23 @@ import { Separator } from "@/components/ui/separator";
 
 type UserType = "vendor" | "owner" | null;
 
-export default function RegisterPage() {
+function RegisterContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [userType, setUserType] = useState<UserType>(null);
+  const [initialized, setInitialized] = useState(false);
+
+  // クエリパラメータでユーザータイプが指定されている場合、ステップ2に進む
+  useEffect(() => {
+    if (initialized) return;
+    const type = searchParams.get("type");
+    if (type === "vendor" || type === "owner") {
+      setUserType(type);
+      setStep(2);
+    }
+    setInitialized(true);
+  }, [searchParams, initialized]);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -372,5 +385,17 @@ export default function RegisterPage() {
         </p>
       </footer>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    }>
+      <RegisterContent />
+    </Suspense>
   );
 }
