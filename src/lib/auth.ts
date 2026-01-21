@@ -284,3 +284,20 @@ declare module "next-auth" {
     };
   }
 }
+
+// 管理者チェック用ヘルパー関数
+export async function isAdmin(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+  return (user as { isAdmin?: boolean } | null)?.isAdmin === true;
+}
+
+// 管理者認証が必要なAPIで使用するヘルパー
+export async function requireAdmin(userId: string): Promise<{ isAdmin: true } | { error: string; status: number }> {
+  const admin = await isAdmin(userId);
+  if (!admin) {
+    return { error: "管理者権限が必要です", status: 403 };
+  }
+  return { isAdmin: true };
+}

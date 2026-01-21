@@ -25,6 +25,7 @@ model User {
 
   // Service-specific fields
   userType      String?   // JSON array: ["vendor"], ["owner"], or ["vendor", "owner"]
+  isAdmin       Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

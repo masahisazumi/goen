@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { auth, requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-// Note: In production, you should add proper admin role checking
 
 // GET: 認証申請一覧を取得（管理者用）
 export async function GET(request: Request) {
@@ -12,8 +10,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
-    // TODO: Add admin role check
-    // For now, we'll allow any authenticated user to view (for demo purposes)
+    // 管理者チェック
+    const adminCheck = await requireAdmin(session.user.id);
+    if ("error" in adminCheck) {
+      return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status });
+    }
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
@@ -58,7 +59,11 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
-    // TODO: Add admin role check
+    // 管理者チェック
+    const adminCheck = await requireAdmin(session.user.id);
+    if ("error" in adminCheck) {
+      return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status });
+    }
 
     const body = await request.json();
     const { requestId, action, note } = body;
