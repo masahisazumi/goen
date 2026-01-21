@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { Heart, Eye, EyeOff, ArrowRight, Store, MapPin, Loader2 } from "lucide-react";
+import { Truck, Eye, EyeOff, ArrowRight, Store, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -94,15 +94,15 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-dusty-pink-light/20 to-background flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="py-6 px-4">
+      <header className="py-6 px-4 bg-white border-b border-gray-100">
         <div className="container mx-auto">
           <Link href="/" className="flex items-center gap-2 w-fit">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
-              <Heart className="h-5 w-5 text-primary-foreground" fill="currentColor" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900">
+              <Truck className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-semibold text-warm-brown">goen</span>
+            <span className="text-xl font-bold tracking-tight">てんむすび</span>
           </Link>
         </div>
       </header>
@@ -121,19 +121,19 @@ export default function RegisterPage() {
 
               <div className="grid gap-4">
                 <Card
-                  className={`cursor-pointer transition-all rounded-2xl border-2 hover:border-primary ${
-                    userType === "vendor" ? "border-primary bg-primary/5" : "border-border"
+                  className={`cursor-pointer transition-all rounded-2xl border-2 hover:border-gray-900 hover:shadow-md ${
+                    userType === "vendor" ? "border-gray-900 bg-gray-50" : "border-gray-200"
                   }`}
                   onClick={() => handleUserTypeSelect("vendor")}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-dusty-pink-light shrink-0">
-                        <Store className="h-6 w-6 text-dusty-pink" />
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary shrink-0">
+                        <Store className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <h3 className="font-semibold">出店者として登録</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">
+                        <h3 className="font-bold text-gray-900">出店者として登録</h3>
+                        <p className="mt-1 text-sm text-gray-600">
                           キッチンカー、ハンドメイド作家、
                           フード販売など、出店場所を探している方
                         </p>
@@ -143,19 +143,19 @@ export default function RegisterPage() {
                 </Card>
 
                 <Card
-                  className={`cursor-pointer transition-all rounded-2xl border-2 hover:border-primary ${
-                    userType === "owner" ? "border-primary bg-primary/5" : "border-border"
+                  className={`cursor-pointer transition-all rounded-2xl border-2 hover:border-gray-900 hover:shadow-md ${
+                    userType === "owner" ? "border-gray-900 bg-gray-50" : "border-gray-200"
                   }`}
                   onClick={() => handleUserTypeSelect("owner")}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sage-light shrink-0">
-                        <MapPin className="h-6 w-6 text-sage" />
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-900 shrink-0">
+                        <MapPin className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <h3 className="font-semibold">スペースオーナーとして登録</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">
+                        <h3 className="font-bold text-gray-900">スペースオーナーとして登録</h3>
+                        <p className="mt-1 text-sm text-gray-600">
                           空きスペースを提供したい方、
                           イベント・マルシェを主催したい方
                         </p>
@@ -362,9 +362,9 @@ export default function RegisterPage() {
       </main>
 
       {/* Footer */}
-      <footer className="py-6 text-center">
-        <p className="text-sm text-muted-foreground">
-          &copy; {new Date().getFullYear()} goen. All rights reserved.
+      <footer className="py-6 text-center bg-white border-t border-gray-100">
+        <p className="text-sm text-gray-500">
+          &copy; {new Date().getFullYear()} てんむすび. All rights reserved.
         </p>
       </footer>
     </div>

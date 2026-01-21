@@ -184,7 +184,7 @@ function AccountSettingsContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header isLoggedIn />
+      <Header />
 
       <main className="flex-1 py-8">
         <div className="container mx-auto px-4 max-w-2xl">
@@ -344,7 +344,7 @@ export default function AccountSettingsPage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex flex-col bg-background">
-          <Header isLoggedIn />
+          <Header />
           <main className="flex-1 py-8">
             <div className="container mx-auto px-4 max-w-2xl">
               <div className="flex items-center justify-center py-20">

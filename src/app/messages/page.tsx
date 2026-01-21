@@ -148,7 +148,7 @@ export default function MessagesPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header isLoggedIn />
+      <Header />
 
       <main className="flex-1 container mx-auto px-4 py-6">
         <div className="h-[calc(100vh-200px)] bg-card rounded-2xl shadow-sm border border-border overflow-hidden">

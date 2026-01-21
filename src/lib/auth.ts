@@ -6,9 +6,113 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 import { cookies } from "next/headers";
+import type { Adapter, AdapterUser } from "next-auth/adapters";
+
+// カスタムアダプター: メールベースのアカウントリンクをサポート
+function CustomPrismaAdapter(): Adapter {
+  const baseAdapter = PrismaAdapter(prisma);
+
+  return {
+    ...baseAdapter,
+
+    // getUserByEmailをオーバーライド
+    // OAuthサインイン時に既存ユーザーが見つかってもnullを返すことで、
+    // createUser → linkAccountの流れに持っていく
+    async getUserByEmail(email: string) {
+      // OAuthフローでは、ここでnullを返すことで
+      // createUserが呼ばれるようにする
+      // createUser内で既存ユーザーをチェックして返す
+      return null;
+    },
+
+    // getUserByAccountをオーバーライド
+    // provider + providerAccountIdで見つからない場合でも、
+    // メールアドレスで既存ユーザーを探す
+    async getUserByAccount(providerAccountId) {
+      // まず標準の方法でアカウントを探す
+      const account = await prisma.account.findUnique({
+        where: {
+          provider_providerAccountId: {
+            provider: providerAccountId.provider,
+            providerAccountId: providerAccountId.providerAccountId,
+          },
+        },
+        include: { user: true },
+      });
+
+      if (account) {
+        return account.user as AdapterUser;
+      }
+
+      return null;
+    },
+
+    // createUserをオーバーライドして、既存ユーザーがいる場合はそのユーザーを返す
+    async createUser(data: AdapterUser) {
+      // メールアドレスで既存ユーザーを検索
+      if (data.email) {
+        const existingUser = await prisma.user.findUnique({
+          where: { email: data.email },
+        });
+
+        if (existingUser) {
+          // 既存ユーザーを返す（新規作成しない）
+          return existingUser as AdapterUser;
+        }
+      }
+
+      // 既存ユーザーがいない場合は新規作成
+      return baseAdapter.createUser!(data);
+    },
+
+    // linkAccountをオーバーライドして、重複を避ける
+    async linkAccount(account) {
+      // 既存のアカウントリンクを確認
+      const existingAccount = await prisma.account.findFirst({
+        where: {
+          provider: account.provider,
+          providerAccountId: account.providerAccountId,
+        },
+      });
+
+      if (existingAccount) {
+        // 既にリンクされている場合は何もしない
+        return;
+      }
+
+      // 同じユーザーに同じプロバイダーのアカウントがないか確認
+      const userAccount = await prisma.account.findFirst({
+        where: {
+          userId: account.userId,
+          provider: account.provider,
+        },
+      });
+
+      if (userAccount) {
+        // 既にこのプロバイダーでリンクされている場合は更新
+        await prisma.account.update({
+          where: { id: userAccount.id },
+          data: {
+            providerAccountId: account.providerAccountId,
+            access_token: account.access_token,
+            refresh_token: account.refresh_token,
+            expires_at: account.expires_at,
+            token_type: account.token_type,
+            scope: account.scope,
+            id_token: account.id_token,
+          },
+        });
+        return;
+      }
+
+      // 新規リンク
+      await baseAdapter.linkAccount!(account);
+    },
+  };
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: CustomPrismaAdapter(),
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,

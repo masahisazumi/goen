@@ -44,13 +44,13 @@ export async function POST(request: Request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create user
+    // Create user with userType as JSON array
     const user = await prisma.user.create({
       data: {
         email,
         name,
         password: hashedPassword,
-        userType,
+        userType: JSON.stringify([userType]), // Store as JSON array
       },
     });
 
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
           id: user.id,
           email: user.email,
           name: user.name,
-          userType: user.userType,
+          userTypes: [userType], // Return as array
         }
       },
       { status: 201 }

@@ -81,8 +81,8 @@ function SearchContent() {
 
       if (searchType === "vendor") {
         const vendors = data.vendors || [];
-        setResults(vendors.map((v: { userId: string; displayName: string; images: { url: string }[]; user: { image: string }; area: string; averageRating: number; reviewCount: number; tags: string; description: string }) => ({
-          id: v.userId,
+        setResults(vendors.map((v: { id: string; storeId?: string; userId: string; displayName: string; images: { url: string }[]; user: { image: string }; area: string; averageRating: number; reviewCount: number; tags: string; description: string }) => ({
+          id: v.storeId || v.id, // Use store ID for linking to /store/[id]
           name: v.displayName,
           image: v.images?.[0]?.url || v.user?.image || "/placeholder.jpg",
           location: v.area || "未設定",

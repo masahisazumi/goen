@@ -24,12 +24,13 @@ model User {
   sessions      Session[]
 
   // Service-specific fields
-  userType      String?   // "vendor" or "owner"
+  userType      String?   // JSON array: ["vendor"], ["owner"], or ["vendor", "owner"]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   // Relations
   profile       Profile?
+  stores        Store[]
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")
   favorites     Favorite[]
@@ -103,6 +104,37 @@ model ProfileImage {
   profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
   url       String
   order     Int     @default(0)
+}
+
+model Store {
+  id          String   @id @default(cuid())
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  category    String?
+  area        String?   // 主な出店エリア
+  tags        String?   // JSON array stored as string
+
+  // ビジネス情報
+  website     String?
+  instagram   String?
+  twitter     String?
+
+  images      StoreImage[]
+
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model StoreImage {
+  id      String @id @default(cuid())
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  url     String
+  order   Int    @default(0)
 }
 
 model Space {

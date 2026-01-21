@@ -20,6 +20,9 @@ import {
   MapPin,
   Loader2,
   Link2,
+  Plus,
+  Building2,
+  Store,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -36,6 +39,7 @@ interface Profile {
   category?: string;
   area?: string;
   isVerified: boolean;
+  userTypes?: string[];
 }
 
 interface Favorite {
@@ -66,6 +70,25 @@ interface Review {
   space?: { id: string; name: string };
 }
 
+interface Space {
+  id: string;
+  name: string;
+  location: string;
+  price?: string;
+  isActive: boolean;
+  images: { url: string }[];
+  _count: { reviews: number; favorites: number };
+}
+
+interface StoreData {
+  id: string;
+  name: string;
+  category?: string;
+  area?: string;
+  isActive: boolean;
+  images: { url: string }[];
+}
+
 const menuItems = [
   { icon: User, label: "プロフィール編集", href: "/profile/edit" },
   { icon: Link2, label: "アカウント連携", href: "/settings/account" },
@@ -83,8 +106,37 @@ export default function MyPage() {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [stats, setStats] = useState({ favorites: 0, messages: 0, bookings: 0, reviews: 0 });
+  const [mySpaces, setMySpaces] = useState<Space[]>([]);
+  const [myStores, setMyStores] = useState<StoreData[]>([]);
+  const [stats, setStats] = useState({ favorites: 0, messages: 0, bookings: 0, reviews: 0, spaces: 0, stores: 0 });
   const [isLoading, setIsLoading] = useState(true);
+  const [isAddingRole, setIsAddingRole] = useState(false);
+
+  // ユーザーの役割をチェック
+  const userTypes = profile?.userTypes || [];
+  const isVendor = userTypes.includes("vendor");
+  const isOwner = userTypes.includes("owner");
+  const hasBothRoles = isVendor && isOwner;
+
+  // 役割を追加する関数
+  const addRole = async (role: string) => {
+    setIsAddingRole(true);
+    try {
+      const res = await fetch("/api/profile/role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setProfile(prev => prev ? { ...prev, userTypes: data.userTypes } : null);
+      }
+    } catch (error) {
+      console.error("Error adding role:", error);
+    } finally {
+      setIsAddingRole(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -102,6 +154,36 @@ export default function MyPage() {
         if (profileRes.ok) {
           const profileData = await profileRes.json();
           setProfile(profileData);
+
+          // オーナー役割を持っている場合は自分のスペースも取得
+          const types = profileData.userTypes || [];
+          if (types.includes("owner")) {
+            const spacesRes = await fetch("/api/spaces/my");
+            if (spacesRes.ok) {
+              const spacesData = await spacesRes.json();
+              setMySpaces(spacesData);
+              setStats(prev => ({ ...prev, spaces: spacesData.length }));
+            }
+          }
+
+          // 出店者役割を持っている場合は自分の店舗も取得
+          if (types.includes("vendor")) {
+            const storesRes = await fetch("/api/stores/my");
+            if (storesRes.ok) {
+              const storesData = await storesRes.json();
+              setMyStores(storesData);
+              setStats(prev => ({ ...prev, stores: storesData.length }));
+            }
+          }
+
+          // 初期タブを設定
+          if (types.includes("owner") && !types.includes("vendor")) {
+            setActiveTab("spaces");
+          } else if (types.includes("vendor")) {
+            setActiveTab("stores");
+          } else {
+            setActiveTab("favorites");
+          }
         }
 
         if (favoritesRes.ok) {
@@ -134,16 +216,22 @@ export default function MyPage() {
   const userProfile = {
     name: profile?.displayName || session?.user?.name || "名前未設定",
     email: session?.user?.email || "",
-    type: "vendor" as const,
     avatar: session?.user?.image || "",
     isVerified: profile?.isVerified || false,
     location: profile?.area || "未設定",
     category: profile?.category || "未設定",
   };
 
+  // 役割表示のラベル
+  const getRoleLabel = () => {
+    if (hasBothRoles) return "出店者 / スペースオーナー";
+    if (isOwner) return "スペースオーナー";
+    return "出店者";
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header isLoggedIn />
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <Header />
 
       <main className="flex-1 py-8">
         <div className="container mx-auto px-4">
@@ -151,13 +239,13 @@ export default function MyPage() {
             {/* Sidebar */}
             <div className="lg:col-span-1 space-y-6">
               {/* Profile Card */}
-              <Card className="border-0 shadow-sm rounded-2xl">
+              <Card className="border-0 shadow-sm rounded-2xl bg-white">
                 <CardContent className="p-6">
                   <div className="flex flex-col items-center text-center">
                     <div className="relative">
                       <Avatar className="h-20 w-20">
                         <AvatarImage src={userProfile.avatar} />
-                        <AvatarFallback className="bg-dusty-pink-light text-dusty-pink text-2xl">
+                        <AvatarFallback className="bg-gray-100 text-gray-600 text-2xl">
                           {userProfile.name[0]}
                         </AvatarFallback>
                       </Avatar>
@@ -172,80 +260,143 @@ export default function MyPage() {
                         </Link>
                       </Button>
                     </div>
-                    <h2 className="mt-4 font-semibold text-lg">{userProfile.name}</h2>
-                    <p className="text-sm text-muted-foreground">{userProfile.email}</p>
-                    <div className="flex items-center gap-2 mt-2">
+                    <h2 className="mt-4 font-bold text-lg text-gray-900">{userProfile.name}</h2>
+                    <p className="text-sm text-gray-500">{userProfile.email}</p>
+                    <div className="flex items-center gap-2 mt-2 flex-wrap justify-center">
                       <Badge variant="secondary" className="rounded-full">
-                        {userProfile.type === "vendor" ? "出店者" : "オーナー"}
+                        {getRoleLabel()}
                       </Badge>
                       {!userProfile.isVerified && (
-                        <Badge variant="outline" className="rounded-full text-yellow-600">
+                        <Badge variant="outline" className="rounded-full text-yellow-600 border-yellow-300">
                           未認証
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 mt-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1 mt-2 text-sm text-gray-500">
                       <MapPin className="h-3.5 w-3.5" />
                       <span>{userProfile.location}</span>
                     </div>
+
+                    {/* 役割追加ボタン */}
+                    {!hasBothRoles && (
+                      <div className="mt-4 w-full">
+                        <Separator className="mb-4" />
+                        {!isOwner && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full rounded-full text-sm"
+                            onClick={() => addRole("owner")}
+                            disabled={isAddingRole}
+                          >
+                            {isAddingRole ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Building2 className="h-4 w-4 mr-2" />
+                            )}
+                            スペースオーナーとしても活動する
+                          </Button>
+                        )}
+                        {!isVendor && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full rounded-full text-sm"
+                            onClick={() => addRole("vendor")}
+                            disabled={isAddingRole}
+                          >
+                            {isAddingRole ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Store className="h-4 w-4 mr-2" />
+                            )}
+                            出店者としても活動する
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <Separator className="my-6" />
 
                   {/* Quick Stats */}
                   <div className="grid grid-cols-2 gap-4">
-                    <Link
-                      href="#"
-                      onClick={(e) => { e.preventDefault(); setActiveTab("favorites"); }}
-                      className="flex flex-col items-center p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
-                    >
-                      <Heart className="h-5 w-5 text-primary mb-1" />
-                      <span className="text-lg font-semibold">{stats.favorites}</span>
-                      <span className="text-xs text-muted-foreground">お気に入り</span>
-                    </Link>
+                    {isOwner && (
+                      <Link
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); setActiveTab("spaces"); }}
+                        className="flex flex-col items-center p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+                      >
+                        <Building2 className="h-5 w-5 text-primary mb-1" />
+                        <span className="text-lg font-bold text-gray-900">{stats.spaces}</span>
+                        <span className="text-xs text-gray-500">マイスペース</span>
+                      </Link>
+                    )}
+                    {isVendor && (
+                      <Link
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); setActiveTab("stores"); }}
+                        className="flex flex-col items-center p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+                      >
+                        <Store className="h-5 w-5 text-primary mb-1" />
+                        <span className="text-lg font-bold text-gray-900">{stats.stores}</span>
+                        <span className="text-xs text-gray-500">マイ店舗</span>
+                      </Link>
+                    )}
+                    {isVendor && (
+                      <Link
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); setActiveTab("favorites"); }}
+                        className="flex flex-col items-center p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+                      >
+                        <Heart className="h-5 w-5 text-primary mb-1" />
+                        <span className="text-lg font-bold text-gray-900">{stats.favorites}</span>
+                        <span className="text-xs text-gray-500">お気に入り</span>
+                      </Link>
+                    )}
                     <Link
                       href="/messages"
-                      className="flex flex-col items-center p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+                      className="flex flex-col items-center p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
                     >
                       <MessageCircle className="h-5 w-5 text-primary mb-1" />
-                      <span className="text-lg font-semibold">{stats.messages}</span>
-                      <span className="text-xs text-muted-foreground">メッセージ</span>
+                      <span className="text-lg font-bold text-gray-900">{stats.messages}</span>
+                      <span className="text-xs text-gray-500">メッセージ</span>
                     </Link>
                     <Link
                       href="#"
                       onClick={(e) => { e.preventDefault(); setActiveTab("bookings"); }}
-                      className="flex flex-col items-center p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+                      className="flex flex-col items-center p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
                     >
                       <Calendar className="h-5 w-5 text-primary mb-1" />
-                      <span className="text-lg font-semibold">{stats.bookings}</span>
-                      <span className="text-xs text-muted-foreground">予約・申請</span>
+                      <span className="text-lg font-bold text-gray-900">{stats.bookings}</span>
+                      <span className="text-xs text-gray-500">予約・申請</span>
                     </Link>
                     <Link
                       href="#"
                       onClick={(e) => { e.preventDefault(); setActiveTab("reviews"); }}
-                      className="flex flex-col items-center p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+                      className="flex flex-col items-center p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
                     >
                       <Star className="h-5 w-5 text-primary mb-1" />
-                      <span className="text-lg font-semibold">{stats.reviews}</span>
-                      <span className="text-xs text-muted-foreground">レビュー</span>
+                      <span className="text-lg font-bold text-gray-900">{stats.reviews}</span>
+                      <span className="text-xs text-gray-500">レビュー</span>
                     </Link>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Menu */}
-              <Card className="border-0 shadow-sm rounded-2xl">
+              <Card className="border-0 shadow-sm rounded-2xl bg-white">
                 <CardContent className="p-4">
                   <nav className="space-y-1">
                     {menuItems.map((item) => (
                       <Link
                         key={item.label}
                         href={item.href}
-                        className="flex items-center justify-between p-3 rounded-xl hover:bg-muted transition-colors"
+                        className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          <item.icon className="h-5 w-5 text-muted-foreground" />
-                          <span className="text-sm font-medium">{item.label}</span>
+                          <item.icon className="h-5 w-5 text-gray-400" />
+                          <span className="text-sm font-medium text-gray-700">{item.label}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           {item.badge && (
@@ -253,14 +404,14 @@ export default function MyPage() {
                               {item.badge}
                             </Badge>
                           )}
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          <ChevronRight className="h-4 w-4 text-gray-400" />
                         </div>
                       </Link>
                     ))}
                     <Separator className="my-2" />
                     <button
                       onClick={() => signOut({ callbackUrl: "/" })}
-                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors w-full text-left text-muted-foreground"
+                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors w-full text-left text-gray-500"
                     >
                       <LogOut className="h-5 w-5" />
                       <span className="text-sm font-medium">ログアウト</span>
@@ -273,118 +424,335 @@ export default function MyPage() {
             {/* Main Content */}
             <div className="lg:col-span-3">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="bg-muted rounded-full p-1 mb-6">
-                  <TabsTrigger value="favorites" className="rounded-full">
-                    <Heart className="h-4 w-4 mr-2" />
-                    お気に入り
-                  </TabsTrigger>
-                  <TabsTrigger value="bookings" className="rounded-full">
+                <TabsList className="bg-white border border-gray-200 rounded-full p-1 mb-6 flex-wrap h-auto gap-1">
+                  {/* 両方の役割を持つ場合はすべてのタブを表示 */}
+                  {isOwner && (
+                    <TabsTrigger value="spaces" className="rounded-full data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+                      <Building2 className="h-4 w-4 mr-2" />
+                      マイスペース
+                    </TabsTrigger>
+                  )}
+                  {isVendor && (
+                    <TabsTrigger value="stores" className="rounded-full data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+                      <Store className="h-4 w-4 mr-2" />
+                      マイ店舗
+                    </TabsTrigger>
+                  )}
+                  {isVendor && (
+                    <TabsTrigger value="favorites" className="rounded-full data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+                      <Heart className="h-4 w-4 mr-2" />
+                      お気に入り
+                    </TabsTrigger>
+                  )}
+                  <TabsTrigger value="bookings" className="rounded-full data-[state=active]:bg-gray-900 data-[state=active]:text-white">
                     <Calendar className="h-4 w-4 mr-2" />
                     予約・申請
                   </TabsTrigger>
-                  <TabsTrigger value="reviews" className="rounded-full">
+                  <TabsTrigger value="reviews" className="rounded-full data-[state=active]:bg-gray-900 data-[state=active]:text-white">
                     <Star className="h-4 w-4 mr-2" />
                     レビュー
                   </TabsTrigger>
                 </TabsList>
 
-                {/* Favorites Tab */}
-                <TabsContent value="favorites" className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">お気に入り一覧</h2>
-                  </div>
-                  {isLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : favorites.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Heart className="h-12 w-12 mx-auto text-muted-foreground/30" />
-                      <p className="mt-4 text-muted-foreground">お気に入りはまだありません</p>
-                      <Button asChild className="mt-4 rounded-full">
-                        <Link href="/search?type=space">スペースを探す</Link>
+                {/* My Spaces Tab (Owner only) */}
+                {isOwner && (
+                  <TabsContent value="spaces" className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-bold text-gray-900">マイスペース</h2>
+                      <Button className="rounded-full" asChild>
+                        <Link href="/spaces/new">
+                          <Plus className="h-4 w-4 mr-2" />
+                          スペースを登録
+                        </Link>
                       </Button>
                     </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {favorites.map((fav) => (
-                        <Card
-                          key={fav.id}
-                          className="border-0 shadow-sm rounded-2xl overflow-hidden"
-                        >
-                          <Link href={`/space/${fav.space.id}`}>
+                    {isLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                      </div>
+                    ) : mySpaces.length === 0 ? (
+                      <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
+                        <Building2 className="h-12 w-12 mx-auto text-gray-300" />
+                        <p className="mt-4 text-gray-500">登録しているスペースはありません</p>
+                        <Button asChild className="mt-4 rounded-full">
+                          <Link href="/spaces/new">
+                            <Plus className="h-4 w-4 mr-2" />
+                            スペースを登録する
+                          </Link>
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {mySpaces.map((space) => (
+                          <Card
+                            key={space.id}
+                            className="border-0 shadow-sm rounded-2xl overflow-hidden bg-white"
+                          >
                             <div className="flex">
-                              <div className="relative w-32 h-32 shrink-0 bg-muted">
-                                {fav.space.images?.[0]?.url && (
+                              <Link href={`/space/${space.id}`} className="relative w-32 h-32 shrink-0 bg-gray-100">
+                                {space.images?.[0]?.url ? (
                                   <Image
-                                    src={fav.space.images[0].url}
-                                    alt={fav.space.name}
+                                    src={space.images[0].url}
+                                    alt={space.name}
                                     fill
                                     className="object-cover"
                                   />
+                                ) : (
+                                  <div className="flex items-center justify-center h-full">
+                                    <Building2 className="h-8 w-8 text-gray-300" />
+                                  </div>
+                                )}
+                              </Link>
+                              <CardContent className="p-4 flex-1">
+                                <div className="flex items-start justify-between">
+                                  <Link href={`/space/${space.id}`}>
+                                    <h3 className="font-bold text-gray-900 line-clamp-1 hover:text-primary">
+                                      {space.name}
+                                    </h3>
+                                  </Link>
+                                  <Badge
+                                    variant={space.isActive ? "default" : "secondary"}
+                                    className="rounded-full text-xs"
+                                  >
+                                    {space.isActive ? "公開中" : "非公開"}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
+                                  <MapPin className="h-3 w-3" />
+                                  <span>{space.location}</span>
+                                </div>
+                                <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                                  <span>
+                                    <Heart className="h-3 w-3 inline mr-1" />
+                                    {space._count?.favorites || 0}
+                                  </span>
+                                  <span>
+                                    <Star className="h-3 w-3 inline mr-1" />
+                                    {space._count?.reviews || 0}件
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between mt-3">
+                                  {space.price && (
+                                    <p className="text-sm font-bold text-primary">
+                                      {space.price}
+                                    </p>
+                                  )}
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="rounded-full text-xs h-7"
+                                    asChild
+                                  >
+                                    <Link href={`/spaces/${space.id}/edit`}>
+                                      <Edit className="h-3 w-3 mr-1" />
+                                      編集
+                                    </Link>
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+                )}
+
+                {/* My Stores Tab (Vendor only) */}
+                {isVendor && (
+                  <TabsContent value="stores" className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-bold text-gray-900">マイ店舗</h2>
+                      <Button className="rounded-full" asChild>
+                        <Link href="/stores/new">
+                          <Plus className="h-4 w-4 mr-2" />
+                          店舗を登録
+                        </Link>
+                      </Button>
+                    </div>
+                    {isLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                      </div>
+                    ) : myStores.length === 0 ? (
+                      <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
+                        <Store className="h-12 w-12 mx-auto text-gray-300" />
+                        <p className="mt-4 text-gray-500">登録している店舗はありません</p>
+                        <Button asChild className="mt-4 rounded-full">
+                          <Link href="/stores/new">
+                            <Plus className="h-4 w-4 mr-2" />
+                            店舗を登録する
+                          </Link>
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {myStores.map((store) => (
+                          <Card
+                            key={store.id}
+                            className="border-0 shadow-sm rounded-2xl overflow-hidden bg-white"
+                          >
+                            <div className="flex">
+                              <div className="relative w-32 h-32 shrink-0 bg-gray-100">
+                                {store.images?.[0]?.url ? (
+                                  <Image
+                                    src={store.images[0].url}
+                                    alt={store.name}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                ) : (
+                                  <div className="flex items-center justify-center h-full">
+                                    <Store className="h-8 w-8 text-gray-300" />
+                                  </div>
                                 )}
                               </div>
                               <CardContent className="p-4 flex-1">
-                                <h3 className="font-semibold line-clamp-1">
-                                  {fav.space.name}
-                                </h3>
-                                <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                                  <MapPin className="h-3 w-3" />
-                                  <span>{fav.space.location}</span>
+                                <div className="flex items-start justify-between">
+                                  <h3 className="font-bold text-gray-900 line-clamp-1">
+                                    {store.name}
+                                  </h3>
+                                  <Badge
+                                    variant={store.isActive ? "default" : "secondary"}
+                                    className="rounded-full text-xs"
+                                  >
+                                    {store.isActive ? "公開中" : "非公開"}
+                                  </Badge>
                                 </div>
-                                <div className="flex items-center gap-1 mt-2">
-                                  <span className="text-xs text-muted-foreground">
-                                    ({fav.space._count?.reviews || 0}件のレビュー)
-                                  </span>
-                                </div>
-                                {fav.space.price && (
-                                  <p className="mt-2 text-sm font-semibold text-primary">
-                                    {fav.space.price}
-                                  </p>
+                                {store.category && (
+                                  <Badge variant="outline" className="rounded-full text-xs mt-2">
+                                    {store.category}
+                                  </Badge>
                                 )}
+                                {store.area && (
+                                  <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
+                                    <MapPin className="h-3 w-3" />
+                                    <span>{store.area}</span>
+                                  </div>
+                                )}
+                                <div className="flex items-center justify-end mt-3">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="rounded-full text-xs h-7"
+                                    asChild
+                                  >
+                                    <Link href={`/stores/${store.id}/edit`}>
+                                      <Edit className="h-3 w-3 mr-1" />
+                                      編集
+                                    </Link>
+                                  </Button>
+                                </div>
                               </CardContent>
                             </div>
-                          </Link>
-                        </Card>
-                      ))}
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+                )}
+
+                {/* Favorites Tab */}
+                {isVendor && (
+                  <TabsContent value="favorites" className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-bold text-gray-900">お気に入り一覧</h2>
                     </div>
-                  )}
-                </TabsContent>
+                    {isLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                      </div>
+                    ) : favorites.length === 0 ? (
+                      <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
+                        <Heart className="h-12 w-12 mx-auto text-gray-300" />
+                        <p className="mt-4 text-gray-500">お気に入りはまだありません</p>
+                        <Button asChild className="mt-4 rounded-full">
+                          <Link href="/search?type=space">スペースを探す</Link>
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {favorites.map((fav) => (
+                          <Card
+                            key={fav.id}
+                            className="border-0 shadow-sm rounded-2xl overflow-hidden bg-white"
+                          >
+                            <Link href={`/space/${fav.space.id}`}>
+                              <div className="flex">
+                                <div className="relative w-32 h-32 shrink-0 bg-gray-100">
+                                  {fav.space.images?.[0]?.url && (
+                                    <Image
+                                      src={fav.space.images[0].url}
+                                      alt={fav.space.name}
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  )}
+                                </div>
+                                <CardContent className="p-4 flex-1">
+                                  <h3 className="font-bold text-gray-900 line-clamp-1">
+                                    {fav.space.name}
+                                  </h3>
+                                  <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
+                                    <MapPin className="h-3 w-3" />
+                                    <span>{fav.space.location}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1 mt-2">
+                                    <span className="text-xs text-gray-500">
+                                      ({fav.space._count?.reviews || 0}件のレビュー)
+                                    </span>
+                                  </div>
+                                  {fav.space.price && (
+                                    <p className="mt-2 text-sm font-bold text-primary">
+                                      {fav.space.price}
+                                    </p>
+                                  )}
+                                </CardContent>
+                              </div>
+                            </Link>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+                )}
 
                 {/* Bookings Tab */}
                 <TabsContent value="bookings" className="space-y-6">
-                  <h2 className="text-xl font-semibold">予約・申請履歴</h2>
+                  <h2 className="text-xl font-bold text-gray-900">予約・申請履歴</h2>
                   {isLoading ? (
                     <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
                     </div>
                   ) : bookings.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Calendar className="h-12 w-12 mx-auto text-muted-foreground/30" />
-                      <p className="mt-4 text-muted-foreground">予約・申請履歴はまだありません</p>
-                      <Button asChild className="mt-4 rounded-full">
-                        <Link href="/search?type=space">スペースを探す</Link>
-                      </Button>
+                    <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
+                      <Calendar className="h-12 w-12 mx-auto text-gray-300" />
+                      <p className="mt-4 text-gray-500">予約・申請履歴はまだありません</p>
+                      {isVendor && (
+                        <Button asChild className="mt-4 rounded-full">
+                          <Link href="/search?type=space">スペースを探す</Link>
+                        </Button>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-4">
                       {bookings.map((booking) => (
                         <Card
                           key={booking.id}
-                          className="border-0 shadow-sm rounded-2xl"
+                          className="border-0 shadow-sm rounded-2xl bg-white"
                         >
                           <CardContent className="p-4">
                             <div className="flex items-start gap-4">
-                              <div className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0 bg-muted flex items-center justify-center">
-                                <Calendar className="h-8 w-8 text-muted-foreground/50" />
+                              <div className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0 bg-gray-100 flex items-center justify-center">
+                                <Calendar className="h-8 w-8 text-gray-300" />
                               </div>
                               <div className="flex-1">
                                 <div className="flex items-start justify-between">
                                   <div>
-                                    <h3 className="font-semibold">
+                                    <h3 className="font-bold text-gray-900">
                                       {booking.space?.name || "スペース"}
                                     </h3>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-sm text-gray-500">
                                       出店希望日: {new Date(booking.date).toLocaleDateString("ja-JP")}
                                     </p>
                                   </div>
@@ -433,40 +801,40 @@ export default function MyPage() {
                 {/* Reviews Tab */}
                 <TabsContent value="reviews" className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">いただいたレビュー</h2>
+                    <h2 className="text-xl font-bold text-gray-900">いただいたレビュー</h2>
                     <div className="flex items-center gap-2">
-                      <Star className="h-5 w-5 fill-soft-coral text-soft-coral" />
-                      <span className="text-muted-foreground">({stats.reviews}件)</span>
+                      <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                      <span className="text-gray-500">({stats.reviews}件)</span>
                     </div>
                   </div>
                   {isLoading ? (
                     <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
                     </div>
                   ) : reviews.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Star className="h-12 w-12 mx-auto text-muted-foreground/30" />
-                      <p className="mt-4 text-muted-foreground">レビューはまだありません</p>
+                    <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
+                      <Star className="h-12 w-12 mx-auto text-gray-300" />
+                      <p className="mt-4 text-gray-500">レビューはまだありません</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
                       {reviews.map((review) => (
                         <Card
                           key={review.id}
-                          className="border-0 shadow-sm rounded-2xl"
+                          className="border-0 shadow-sm rounded-2xl bg-white"
                         >
                           <CardContent className="p-5">
                             <div className="flex items-start gap-4">
                               <Avatar className="h-12 w-12">
                                 <AvatarImage src={review.author.image || ""} />
-                                <AvatarFallback className="bg-sage-light text-sage">
+                                <AvatarFallback className="bg-gray-100 text-gray-600">
                                   {review.author.name?.[0] || "U"}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1">
                                 <div className="flex items-center justify-between">
-                                  <p className="font-medium">{review.author.name || "ユーザー"}</p>
-                                  <p className="text-xs text-muted-foreground">
+                                  <p className="font-medium text-gray-900">{review.author.name || "ユーザー"}</p>
+                                  <p className="text-xs text-gray-500">
                                     {new Date(review.createdAt).toLocaleDateString("ja-JP")}
                                   </p>
                                 </div>
@@ -474,17 +842,17 @@ export default function MyPage() {
                                   {[...Array(review.rating)].map((_, i) => (
                                     <Star
                                       key={i}
-                                      className="h-4 w-4 fill-soft-coral text-soft-coral"
+                                      className="h-4 w-4 fill-yellow-400 text-yellow-400"
                                     />
                                   ))}
                                 </div>
                                 {review.content && (
-                                  <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+                                  <p className="mt-3 text-sm text-gray-600 leading-relaxed">
                                     {review.content}
                                   </p>
                                 )}
                                 {review.space && (
-                                  <p className="mt-2 text-xs text-muted-foreground">
+                                  <p className="mt-2 text-xs text-gray-500">
                                     スペース: {review.space.name}
                                   </p>
                                 )}

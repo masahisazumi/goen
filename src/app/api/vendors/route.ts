@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET: 出店者一覧を取得
+// GET: 出店者（店舗）一覧を取得
+// 店舗ベースで検索し、結果を返す
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -11,64 +12,58 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get("limit") || "20");
     const offset = parseInt(searchParams.get("offset") || "0");
 
-    // Find profiles with user type "vendor"
-    const profileWhere: Record<string, unknown> = {};
+    // Search stores
+    const storeWhere: Record<string, unknown> = { isActive: true };
 
     if (category) {
-      profileWhere.category = category;
+      storeWhere.category = { contains: category };
     }
 
     if (area) {
-      profileWhere.area = { contains: area };
+      storeWhere.area = { contains: area };
     }
 
     if (query) {
-      profileWhere.OR = [
-        { displayName: { contains: query } },
+      storeWhere.OR = [
+        { name: { contains: query } },
         { description: { contains: query } },
         { tags: { contains: query } },
       ];
     }
 
-    const [profiles, total] = await Promise.all([
-      prisma.profile.findMany({
-        where: {
-          ...profileWhere,
-          user: { userType: "vendor" },
-        },
+    const [stores, total] = await Promise.all([
+      prisma.store.findMany({
+        where: storeWhere,
         include: {
-          user: { select: { id: true, name: true, image: true } },
+          owner: { select: { id: true, name: true, image: true } },
           images: { orderBy: { order: "asc" }, take: 1 },
         },
         orderBy: { createdAt: "desc" },
         take: limit,
         skip: offset,
       }),
-      prisma.profile.count({
-        where: {
-          ...profileWhere,
-          user: { userType: "vendor" },
-        },
-      }),
+      prisma.store.count({ where: storeWhere }),
     ]);
 
-    // Add review stats
-    const vendorsWithStats = await Promise.all(
-      profiles.map(async (profile) => {
-        const reviewStats = await prisma.review.aggregate({
-          where: { targetId: profile.userId },
-          _avg: { rating: true },
-          _count: { rating: true },
-        });
-        return {
-          ...profile,
-          averageRating: reviewStats._avg.rating || 0,
-          reviewCount: reviewStats._count.rating,
-        };
-      })
-    );
+    // Transform to vendor-like format for backwards compatibility
+    const vendors = stores.map((store) => ({
+      id: store.id,
+      userId: store.ownerId,
+      displayName: store.name,
+      description: store.description,
+      category: store.category,
+      area: store.area,
+      tags: store.tags,
+      isVerified: false, // TODO: Add verification to stores or check owner
+      images: store.images,
+      user: store.owner,
+      averageRating: 0, // TODO: Add reviews to stores
+      reviewCount: 0,
+      // Include the store reference for detail links
+      storeId: store.id,
+    }));
 
-    return NextResponse.json({ vendors: vendorsWithStats, total, limit, offset });
+    return NextResponse.json({ vendors, total, limit, offset });
   } catch (error) {
     console.error("Vendors fetch error:", error);
     return NextResponse.json({ error: "出店者の取得に失敗しました" }, { status: 500 });

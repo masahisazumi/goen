@@ -3,45 +3,47 @@
 import { useState } from "react";
 import Image from "next/image";
 import {
+  ArrowRight,
   Truck,
   MapPin,
   Users,
   Shield,
-  Sparkles,
   CheckCircle2,
   Loader2,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Card, CardContent } from "@/components/ui/card";
 
 const features = [
   {
     icon: Users,
     title: "簡単マッチング",
-    description: "出店者とスペースオーナーを最適にマッチング",
-    color: "bg-food-orange-light text-food-orange",
+    description: "出店者とスペースオーナーを最適にマッチング。面倒な交渉は不要です。",
   },
   {
     icon: Shield,
     title: "安心・安全",
-    description: "本人確認済みユーザーのみが利用可能",
-    color: "bg-fresh-green-light text-fresh-green",
+    description: "本人確認済みユーザーのみが利用可能。トラブルを未然に防ぎます。",
   },
   {
     icon: MapPin,
     title: "全国対応",
-    description: "日本全国のスペースを検索・掲載可能",
-    color: "bg-accent text-accent-foreground",
+    description: "日本全国のスペースを検索・掲載可能。地域を選ばず活用できます。",
   },
   {
-    icon: Sparkles,
+    icon: Truck,
     title: "無料で利用開始",
-    description: "登録料・月額費用は一切かかりません",
-    color: "bg-secondary/20 text-secondary",
+    description: "登録料・月額費用は一切かかりません。成約時のみ手数料が発生します。",
   },
+];
+
+const stats = [
+  { value: "500", suffix: "+", label: "登録スペース" },
+  { value: "1,000", suffix: "+", label: "登録出店者" },
+  { value: "98", suffix: "%", label: "満足度" },
 ];
 
 export default function ComingSoonPage() {
@@ -86,245 +88,303 @@ export default function ComingSoonPage() {
     }
   };
 
+  const scrollToForm = () => {
+    document.getElementById("registration-form")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-food-orange-light/30 via-background to-fresh-green-light/20">
+    <div className="min-h-screen flex flex-col bg-white">
       {/* Header */}
-      <header className="py-6 px-4">
-        <div className="container mx-auto">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-100">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-white">
               <Truck className="h-5 w-5" />
             </div>
-            <span className="text-xl font-bold text-warm-brown">てんむすび</span>
+            <span className="text-xl font-bold tracking-tight">てんむすび</span>
           </div>
+          <Button
+            onClick={scrollToForm}
+            className="rounded-full bg-gray-900 hover:bg-gray-800 text-white px-6"
+          >
+            先行登録
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
         </div>
       </header>
 
-      <main className="flex-1">
+      <main className="flex-1 pt-16">
         {/* Hero Section */}
-        <section className="py-12 md:py-20 px-4">
-          <div className="container mx-auto">
-            <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:items-center">
-              <div className="text-center lg:text-left">
-                <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary mb-6">
-                  <Sparkles className="h-4 w-4" />
-                  Coming Soon
-                </div>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl leading-tight">
-                  キッチンカーと
-                  <br />
-                  スペースをつなぐ
-                  <br />
-                  <span className="text-primary">新しいマッチング</span>
-                </h1>
-                <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
-                  てんむすびは、キッチンカーやハンドメイド作家と、
-                  <br className="hidden sm:block" />
-                  空きスペースを持つオーナーをつなぐ
-                  <br className="hidden sm:block" />
-                  出店マッチングサービスです。
-                </p>
-                <p className="mt-4 text-base text-muted-foreground">
-                  サービス開始時にお知らせをお届けします。
-                  <br />
-                  先行登録で最新情報をいち早くゲット!
-                </p>
+        <section className="relative min-h-[90vh] flex items-center">
+          <div className="absolute inset-0 z-0">
+            <Image
+              src="https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?w=1920&q=80"
+              alt="キッチンカーの様子"
+              fill
+              className="object-cover"
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/70" />
+          </div>
+
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 mb-8">
+                <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                Coming Soon
               </div>
 
-              <div className="relative mx-auto w-full max-w-lg lg:max-w-none">
-                <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-fresh-green-light/50 border-4 border-white shadow-xl">
-                  <Image
-                    src="https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?w=800&q=80"
-                    alt="キッチンカーの様子"
-                    fill
-                    className="object-cover"
-                    priority
-                  />
-                </div>
-                <div className="absolute -bottom-4 -left-4 rounded-2xl bg-card p-4 shadow-xl border border-border">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-white">
-                      <Truck className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">先行登録受付中</p>
-                      <p className="text-xs text-muted-foreground">無料・簡単登録</p>
-                    </div>
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-gray-900 leading-tight">
+                キッチンカー出店・
+                <br />
+                スペース提供なら
+                <br />
+                <span className="text-gray-900">てんむすび</span>
+              </h1>
+
+              <p className="mt-8 text-lg text-gray-600 leading-relaxed max-w-lg">
+                キッチンカーやハンドメイド作家と、空きスペースを持つオーナーをつなぐ出店マッチングサービス。
+                あなたのビジネスを次のステージへ。
+              </p>
+
+              <div className="mt-10 flex flex-col sm:flex-row gap-4">
+                <Button
+                  onClick={scrollToForm}
+                  size="lg"
+                  className="rounded-full bg-gray-900 hover:bg-gray-800 text-white px-8 h-14 text-base"
+                >
+                  先行登録する（無料）
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
+
+              {/* Stats */}
+              <div className="mt-16 flex gap-12">
+                {stats.map((stat) => (
+                  <div key={stat.label}>
+                    <p className="text-3xl font-bold text-gray-900">
+                      {stat.value}
+                      <span className="text-xl">{stat.suffix}</span>
+                    </p>
+                    <p className="mt-1 text-sm text-gray-500">{stat.label}</p>
                   </div>
-                </div>
+                ))}
               </div>
             </div>
+          </div>
+
+          {/* Scroll Indicator */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-gray-400">
+            <span className="text-xs tracking-widest">SCROLL</span>
+            <ChevronDown className="h-5 w-5 animate-bounce" />
           </div>
         </section>
 
         {/* Features Section */}
-        <section className="py-12 md:py-16 px-4 bg-white/50">
-          <div className="container mx-auto">
-            <div className="text-center mb-10">
-              <h2 className="text-2xl font-bold md:text-3xl">
+        <section className="py-24 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
                 てんむすびの特徴
               </h2>
-              <p className="mt-3 text-muted-foreground">
-                出店ビジネスをもっと簡単に、もっと安心に
+              <p className="mt-4 text-gray-600 max-w-2xl mx-auto">
+                出店ビジネスをもっと簡単に、もっと安心に。
+                私たちが選ばれる理由をご紹介します。
               </p>
             </div>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {features.map((feature) => {
                 const Icon = feature.icon;
                 return (
-                  <Card
+                  <div
                     key={feature.title}
-                    className="border border-border bg-card shadow-sm rounded-2xl hover:shadow-md transition-shadow"
+                    className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow border border-gray-100"
                   >
-                    <CardContent className="p-6 text-center">
-                      <div
-                        className={`mx-auto flex h-14 w-14 items-center justify-center rounded-xl ${feature.color}`}
-                      >
-                        <Icon className="h-7 w-7" />
-                      </div>
-                      <h3 className="mt-4 font-semibold text-foreground">
-                        {feature.title}
-                      </h3>
-                      <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                        {feature.description}
-                      </p>
-                    </CardContent>
-                  </Card>
+                    <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gray-900 text-white mb-6">
+                      <Icon className="h-7 w-7" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-3">
+                      {feature.title}
+                    </h3>
+                    <p className="text-gray-600 leading-relaxed">
+                      {feature.description}
+                    </p>
+                  </div>
                 );
               })}
             </div>
           </div>
         </section>
 
+        {/* How it works */}
+        <section className="py-24 bg-white">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
+                ご利用の流れ
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              {[
+                { step: "01", title: "無料登録", desc: "メールアドレスで簡単登録" },
+                { step: "02", title: "検索・マッチング", desc: "条件に合う相手を探す" },
+                { step: "03", title: "出店開始", desc: "メッセージで詳細を調整" },
+              ].map((item, index) => (
+                <div key={item.step} className="relative text-center">
+                  <div className="text-6xl font-bold text-gray-100 mb-4">{item.step}</div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{item.title}</h3>
+                  <p className="text-gray-600">{item.desc}</p>
+                  {index < 2 && (
+                    <ArrowRight className="hidden md:block absolute top-8 -right-4 h-6 w-6 text-gray-300" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Registration Form Section */}
-        <section className="py-16 md:py-24 px-4">
-          <div className="container mx-auto max-w-xl">
-            <Card className="rounded-3xl border-0 shadow-xl bg-card">
-              <CardContent className="p-8 md:p-10">
-                {isSuccess ? (
-                  <div className="text-center py-8">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-fresh-green-light mx-auto mb-6">
-                      <CheckCircle2 className="h-8 w-8 text-fresh-green" />
-                    </div>
-                    <h3 className="text-2xl font-bold mb-3">
-                      登録完了しました!
-                    </h3>
-                    <p className="text-muted-foreground leading-relaxed">
-                      ご登録ありがとうございます。
-                      <br />
-                      サービス開始時にメールでお知らせいたします。
+        <section id="registration-form" className="py-24 bg-gray-900 text-white">
+          <div className="container mx-auto px-4">
+            <div className="max-w-xl mx-auto">
+              {isSuccess ? (
+                <div className="text-center py-12">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-500/20 mx-auto mb-8">
+                    <CheckCircle2 className="h-10 w-10 text-green-400" />
+                  </div>
+                  <h3 className="text-3xl font-bold mb-4">
+                    登録完了しました！
+                  </h3>
+                  <p className="text-gray-400 leading-relaxed">
+                    ご登録ありがとうございます。
+                    <br />
+                    サービス開始時にメールでお知らせいたします。
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="text-center mb-10">
+                    <h2 className="text-3xl md:text-4xl font-bold">先行登録</h2>
+                    <p className="mt-4 text-gray-400">
+                      サービス開始時に優先的にご案内いたします
                     </p>
                   </div>
-                ) : (
-                  <>
-                    <div className="text-center mb-8">
-                      <h2 className="text-2xl font-bold">先行登録</h2>
-                      <p className="mt-2 text-muted-foreground">
-                        サービス開始時に優先的にご案内します
-                      </p>
+
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {error && (
+                      <div className="p-4 text-sm text-red-400 bg-red-900/30 rounded-xl border border-red-800">
+                        {error}
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-gray-300">
+                        メールアドレス
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="example@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="rounded-xl h-14 bg-white/10 border-white/20 text-white placeholder:text-gray-500 focus:border-white focus:ring-white"
+                        disabled={isLoading}
+                      />
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                      {error && (
-                        <div className="p-3 text-sm text-red-600 bg-red-50 rounded-xl">
-                          {error}
-                        </div>
-                      )}
-
-                      <div className="space-y-2">
-                        <Label htmlFor="email">メールアドレス</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="example@email.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="rounded-xl h-12"
-                          disabled={isLoading}
-                        />
-                      </div>
-
-                      <div className="space-y-3">
-                        <Label>ご利用目的</Label>
-                        <RadioGroup
-                          value={userType}
-                          onValueChange={setUserType}
-                          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
-                          disabled={isLoading}
-                        >
-                          <Label
-                            htmlFor="vendor"
-                            className={`flex items-center gap-3 rounded-xl border-2 p-4 cursor-pointer transition-colors ${
-                              userType === "vendor"
-                                ? "border-primary bg-primary/5"
-                                : "border-border hover:border-primary/50"
-                            }`}
-                          >
-                            <RadioGroupItem value="vendor" id="vendor" />
-                            <div>
-                              <div className="font-medium">出店者として</div>
-                              <div className="text-xs text-muted-foreground">
-                                スペースを探したい
-                              </div>
-                            </div>
-                          </Label>
-                          <Label
-                            htmlFor="owner"
-                            className={`flex items-center gap-3 rounded-xl border-2 p-4 cursor-pointer transition-colors ${
-                              userType === "owner"
-                                ? "border-primary bg-primary/5"
-                                : "border-border hover:border-primary/50"
-                            }`}
-                          >
-                            <RadioGroupItem value="owner" id="owner" />
-                            <div>
-                              <div className="font-medium">オーナーとして</div>
-                              <div className="text-xs text-muted-foreground">
-                                スペースを貸したい
-                              </div>
-                            </div>
-                          </Label>
-                        </RadioGroup>
-                      </div>
-
-                      <Button
-                        type="submit"
-                        size="lg"
-                        className="w-full rounded-xl h-12 text-base"
+                    <div className="space-y-3">
+                      <Label className="text-gray-300">ご利用目的</Label>
+                      <RadioGroup
+                        value={userType}
+                        onValueChange={setUserType}
+                        className="grid grid-cols-1 gap-3 sm:grid-cols-2"
                         disabled={isLoading}
                       >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            登録中...
-                          </>
-                        ) : (
-                          "先行登録する（無料）"
-                        )}
-                      </Button>
+                        <Label
+                          htmlFor="vendor"
+                          className={`flex items-center gap-3 rounded-xl border-2 p-5 cursor-pointer transition-all ${
+                            userType === "vendor"
+                              ? "border-white bg-white/10"
+                              : "border-white/20 hover:border-white/40"
+                          }`}
+                        >
+                          <RadioGroupItem
+                            value="vendor"
+                            id="vendor"
+                            className="border-white/50 text-white"
+                          />
+                          <div>
+                            <div className="font-medium">出店者として</div>
+                            <div className="text-sm text-gray-400">
+                              スペースを探したい
+                            </div>
+                          </div>
+                        </Label>
+                        <Label
+                          htmlFor="owner"
+                          className={`flex items-center gap-3 rounded-xl border-2 p-5 cursor-pointer transition-all ${
+                            userType === "owner"
+                              ? "border-white bg-white/10"
+                              : "border-white/20 hover:border-white/40"
+                          }`}
+                        >
+                          <RadioGroupItem
+                            value="owner"
+                            id="owner"
+                            className="border-white/50 text-white"
+                          />
+                          <div>
+                            <div className="font-medium">オーナーとして</div>
+                            <div className="text-sm text-gray-400">
+                              スペースを貸したい
+                            </div>
+                          </div>
+                        </Label>
+                      </RadioGroup>
+                    </div>
 
-                      <p className="text-xs text-center text-muted-foreground">
-                        登録することで、サービス開始のお知らせを受け取ることに同意したものとみなされます。
-                      </p>
-                    </form>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="w-full rounded-xl h-14 text-base bg-white text-gray-900 hover:bg-gray-100"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          登録中...
+                        </>
+                      ) : (
+                        <>
+                          先行登録する（無料）
+                          <ArrowRight className="ml-2 h-5 w-5" />
+                        </>
+                      )}
+                    </Button>
+
+                    <p className="text-xs text-center text-gray-500">
+                      登録することで、サービス開始のお知らせを受け取ることに同意したものとみなされます。
+                    </p>
+                  </form>
+                </>
+              )}
+            </div>
           </div>
         </section>
       </main>
 
       {/* Footer */}
-      <footer className="py-8 px-4 border-t">
+      <footer className="py-8 px-4 bg-gray-900 border-t border-gray-800">
         <div className="container mx-auto text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-900">
               <Truck className="h-4 w-4" />
             </div>
-            <span className="text-lg font-bold text-warm-brown">てんむすび</span>
+            <span className="text-lg font-bold text-white">てんむすび</span>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-gray-500">
             &copy; {new Date().getFullYear()} てんむすび. All rights reserved.
           </p>
         </div>

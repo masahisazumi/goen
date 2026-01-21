@@ -2,6 +2,18 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+// ユーザータイプをパースするヘルパー関数
+function parseUserTypes(userType: string | null): string[] {
+  if (!userType) return [];
+  try {
+    const parsed = JSON.parse(userType);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    // 旧フォーマット（単一文字列）のサポート
+    return userType ? [userType] : [];
+  }
+}
+
 // GET: 現在のユーザーのプロフィールを取得
 export async function GET() {
   try {
@@ -10,16 +22,24 @@ export async function GET() {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { userType: true },
+    });
+
     const profile = await prisma.profile.findUnique({
       where: { userId: session.user.id },
       include: { images: true },
     });
 
+    const userTypes = parseUserTypes(user?.userType || null);
+
     if (!profile) {
-      return NextResponse.json({ error: "プロフィールが見つかりません" }, { status: 404 });
+      // プロフィールがなくてもuserTypesは返す
+      return NextResponse.json({ userTypes });
     }
 
-    return NextResponse.json(profile);
+    return NextResponse.json({ ...profile, userTypes });
   } catch (error) {
     console.error("Profile fetch error:", error);
     return NextResponse.json({ error: "プロフィールの取得に失敗しました" }, { status: 500 });

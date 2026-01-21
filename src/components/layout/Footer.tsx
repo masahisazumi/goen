@@ -22,34 +22,33 @@ const footerLinks = {
 
 export function Footer() {
   return (
-    <footer className="border-t border-border bg-cream">
-      <div className="container mx-auto px-4 py-12">
+    <footer className="bg-gray-900 text-white">
+      <div className="container mx-auto px-4 py-16">
         {/* Main Footer Content */}
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div className="lg:col-span-1">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
-                <Truck className="h-5 w-5 text-primary-foreground" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white">
+                <Truck className="h-5 w-5 text-gray-900" />
               </div>
-              <span className="text-xl font-bold text-warm-brown">てんむすび</span>
+              <span className="text-xl font-bold">てんむすび</span>
             </Link>
-            <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
-              キッチンカーと出店場所をつなぐ、<br />
-              ビジネスマッチングサービス。<br />
-              あなたのキッチンカービジネスを<br />
-              成功へ導きます。
+            <p className="mt-4 text-sm text-gray-400 leading-relaxed">
+              キッチンカーやハンドメイド作家と、
+              空きスペースを持つオーナーをつなぐ
+              マッチングサービス。
             </p>
-            <div className="mt-6 flex gap-4">
+            <div className="mt-6 flex gap-3">
               <Link
                 href="#"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-800 text-gray-400 transition-colors hover:bg-gray-700 hover:text-white"
               >
                 <Instagram className="h-5 w-5" />
               </Link>
               <Link
                 href="#"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-800 text-gray-400 transition-colors hover:bg-gray-700 hover:text-white"
               >
                 <Twitter className="h-5 w-5" />
               </Link>
@@ -58,13 +57,13 @@ export function Footer() {
 
           {/* Service Links */}
           <div>
-            <h3 className="font-semibold text-foreground mb-4">サービス</h3>
+            <h3 className="font-bold text-white mb-4">サービス</h3>
             <ul className="space-y-3">
               {footerLinks.service.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                    className="text-sm text-gray-400 transition-colors hover:text-white"
                   >
                     {link.name}
                   </Link>
@@ -75,13 +74,13 @@ export function Footer() {
 
           {/* Support Links */}
           <div>
-            <h3 className="font-semibold text-foreground mb-4">サポート</h3>
+            <h3 className="font-bold text-white mb-4">サポート</h3>
             <ul className="space-y-3">
               {footerLinks.support.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                    className="text-sm text-gray-400 transition-colors hover:text-white"
                   >
                     {link.name}
                   </Link>
@@ -92,13 +91,13 @@ export function Footer() {
 
           {/* Legal Links */}
           <div>
-            <h3 className="font-semibold text-foreground mb-4">規約・ポリシー</h3>
+            <h3 className="font-bold text-white mb-4">規約・ポリシー</h3>
             <ul className="space-y-3">
               {footerLinks.legal.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                    className="text-sm text-gray-400 transition-colors hover:text-white"
                   >
                     {link.name}
                   </Link>
@@ -109,20 +108,20 @@ export function Footer() {
         </div>
 
         {/* Trust Message */}
-        <div className="mt-12 rounded-2xl bg-fresh-green-light/50 p-6 text-center border border-fresh-green/20">
-          <p className="text-sm text-warm-brown">
-            てんむすびは、安心・安全なマッチングを心がけています。<br />
+        <div className="mt-12 rounded-2xl bg-gray-800 p-6 text-center">
+          <p className="text-sm text-gray-400">
+            てんむすびは、安心・安全なマッチングを心がけています。
             本人確認済みユーザーのみが利用でき、トラブル時のサポート体制も整っています。
           </p>
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 md:flex-row">
-          <p className="text-sm text-muted-foreground">
+        <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-gray-800 pt-8 md:flex-row">
+          <p className="text-sm text-gray-500">
             &copy; {new Date().getFullYear()} てんむすび. All rights reserved.
           </p>
-          <p className="text-xs text-muted-foreground">
-            キッチンカーオーナーとスペースオーナーのために
+          <p className="text-xs text-gray-500">
+            出店者とスペースオーナーのためのマッチングサービス
           </p>
         </div>
       </div>
