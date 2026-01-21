@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -77,7 +77,7 @@ const availableProviders = [
   },
 ];
 
-export default function AccountSettingsPage() {
+function AccountSettingsContent() {
   const searchParams = useSearchParams();
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -336,5 +336,27 @@ export default function AccountSettingsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+export default function AccountSettingsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex flex-col bg-background">
+          <Header isLoggedIn />
+          <main className="flex-1 py-8">
+            <div className="container mx-auto px-4 max-w-2xl">
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            </div>
+          </main>
+          <Footer />
+        </div>
+      }
+    >
+      <AccountSettingsContent />
+    </Suspense>
   );
 }
