@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -15,6 +15,7 @@ import {
   Globe,
   Instagram,
   Twitter,
+  ShieldAlert,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -62,6 +63,30 @@ export default function NewStorePage() {
     twitter: "",
   });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [isCheckingRole, setIsCheckingRole] = useState(true);
+  const [isVendor, setIsVendor] = useState(false);
+
+  // 役割チェック
+  useEffect(() => {
+    const checkRole = async () => {
+      if (!session?.user) return;
+      try {
+        const res = await fetch("/api/profile");
+        if (res.ok) {
+          const data = await res.json();
+          const userTypes = data.userTypes || [];
+          setIsVendor(userTypes.includes("vendor"));
+        }
+      } catch (error) {
+        console.error("Role check error:", error);
+      } finally {
+        setIsCheckingRole(false);
+      }
+    };
+    if (session) {
+      checkRole();
+    }
+  }, [session]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -117,7 +142,7 @@ export default function NewStorePage() {
   };
 
   // 認証チェック
-  if (status === "loading") {
+  if (status === "loading" || isCheckingRole) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -128,6 +153,40 @@ export default function NewStorePage() {
   if (!session) {
     router.push("/login?callbackUrl=/stores/new");
     return null;
+  }
+
+  // 出店者でない場合はアクセス不可
+  if (!isVendor) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <Header />
+        <main className="flex-1 py-8">
+          <div className="container mx-auto px-4 max-w-2xl">
+            <Card className="rounded-2xl border-0 shadow-md">
+              <CardContent className="p-8 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100 mx-auto mb-6">
+                  <ShieldAlert className="h-8 w-8 text-red-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                  アクセス権限がありません
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  店舗登録は出店者アカウントのみ利用できます。
+                </p>
+                <Button
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => router.push("/mypage")}
+                >
+                  マイページへ戻る
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   return (

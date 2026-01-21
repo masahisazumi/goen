@@ -15,6 +15,8 @@ import {
   CheckCircle2,
   ArrowLeft,
   User,
+  Store,
+  MapPin,
 } from "lucide-react";
 import { Instagram, Twitter } from "lucide-react";
 import { Header } from "@/components/layout/Header";
@@ -40,6 +42,7 @@ export default function ProfileEditPage() {
     twitter: "",
   });
   const [previewImages, setPreviewImages] = useState<string[]>([]);
+  const [userTypes, setUserTypes] = useState<string[]>([]);
 
   // プロフィールデータを読み込む
   useEffect(() => {
@@ -58,6 +61,10 @@ export default function ProfileEditPage() {
           // 画像を設定
           if (data.images && data.images.length > 0) {
             setPreviewImages(data.images.map((img: { url: string }) => img.url));
+          }
+          // ユーザータイプを設定
+          if (data.userTypes) {
+            setUserTypes(data.userTypes);
           }
         }
       } catch (err) {
@@ -157,8 +164,40 @@ export default function ProfileEditPage() {
                 <p className="text-gray-600 mb-6">
                   プロフィール情報が正常に保存されました。
                 </p>
+
+                {/* ユーザータイプに応じた次のステップ案内 */}
+                {userTypes.includes("vendor") && (
+                  <div className="mb-6 p-4 bg-orange-50 rounded-xl border border-orange-100">
+                    <p className="text-sm text-orange-800 mb-3">
+                      次に、マイ店舗を登録しましょう！
+                    </p>
+                    <Button
+                      className="rounded-full bg-orange-500 hover:bg-orange-600"
+                      onClick={() => router.push("/stores/new")}
+                    >
+                      <Store className="mr-2 h-4 w-4" />
+                      マイ店舗を登録する
+                    </Button>
+                  </div>
+                )}
+                {userTypes.includes("owner") && !userTypes.includes("vendor") && (
+                  <div className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <p className="text-sm text-blue-800 mb-3">
+                      次に、スペースを登録しましょう！
+                    </p>
+                    <Button
+                      className="rounded-full bg-blue-500 hover:bg-blue-600"
+                      onClick={() => router.push("/spaces/new")}
+                    >
+                      <MapPin className="mr-2 h-4 w-4" />
+                      スペースを登録する
+                    </Button>
+                  </div>
+                )}
+
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <Button
+                    variant="outline"
                     className="rounded-full"
                     onClick={() => setIsSuccess(false)}
                   >

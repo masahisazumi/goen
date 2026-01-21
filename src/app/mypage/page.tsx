@@ -110,33 +110,11 @@ export default function MyPage() {
   const [myStores, setMyStores] = useState<StoreData[]>([]);
   const [stats, setStats] = useState({ favorites: 0, messages: 0, bookings: 0, reviews: 0, spaces: 0, stores: 0 });
   const [isLoading, setIsLoading] = useState(true);
-  const [isAddingRole, setIsAddingRole] = useState(false);
 
   // ユーザーの役割をチェック
   const userTypes = profile?.userTypes || [];
   const isVendor = userTypes.includes("vendor");
   const isOwner = userTypes.includes("owner");
-  const hasBothRoles = isVendor && isOwner;
-
-  // 役割を追加する関数
-  const addRole = async (role: string) => {
-    setIsAddingRole(true);
-    try {
-      const res = await fetch("/api/profile/role", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setProfile(prev => prev ? { ...prev, userTypes: data.userTypes } : null);
-      }
-    } catch (error) {
-      console.error("Error adding role:", error);
-    } finally {
-      setIsAddingRole(false);
-    }
-  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -224,7 +202,6 @@ export default function MyPage() {
 
   // 役割表示のラベル
   const getRoleLabel = () => {
-    if (hasBothRoles) return "出店者 / スペースオーナー";
     if (isOwner) return "スペースオーナー";
     return "出店者";
   };
@@ -276,45 +253,6 @@ export default function MyPage() {
                       <MapPin className="h-3.5 w-3.5" />
                       <span>{userProfile.location}</span>
                     </div>
-
-                    {/* 役割追加ボタン */}
-                    {!hasBothRoles && (
-                      <div className="mt-4 w-full">
-                        <Separator className="mb-4" />
-                        {!isOwner && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full rounded-full text-sm"
-                            onClick={() => addRole("owner")}
-                            disabled={isAddingRole}
-                          >
-                            {isAddingRole ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <Building2 className="h-4 w-4 mr-2" />
-                            )}
-                            スペースオーナーとしても活動する
-                          </Button>
-                        )}
-                        {!isVendor && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full rounded-full text-sm"
-                            onClick={() => addRole("vendor")}
-                            disabled={isAddingRole}
-                          >
-                            {isAddingRole ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <Store className="h-4 w-4 mr-2" />
-                            )}
-                            出店者としても活動する
-                          </Button>
-                        )}
-                      </div>
-                    )}
                   </div>
 
                   <Separator className="my-6" />
@@ -381,6 +319,31 @@ export default function MyPage() {
                       <span className="text-xs text-gray-500">レビュー</span>
                     </Link>
                   </div>
+
+                  {/* 登録ボタン */}
+                  {(isVendor || isOwner) && (
+                    <>
+                      <Separator className="my-4" />
+                      <div className="space-y-2">
+                        {isVendor && (
+                          <Button asChild className="w-full rounded-full" size="sm">
+                            <Link href="/stores/new">
+                              <Store className="h-4 w-4 mr-2" />
+                              店舗を登録する
+                            </Link>
+                          </Button>
+                        )}
+                        {isOwner && (
+                          <Button asChild variant="outline" className="w-full rounded-full" size="sm">
+                            <Link href="/spaces/new">
+                              <Building2 className="h-4 w-4 mr-2" />
+                              スペースを登録する
+                            </Link>
+                          </Button>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 

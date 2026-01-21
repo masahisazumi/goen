@@ -244,6 +244,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async createUser({ user }) {
       // Create a profile when a new user is created via OAuth
       if (user.id) {
+        // cookieからuserTypeを取得
+        const cookieStore = await cookies();
+        const registerUserType = cookieStore.get("register_user_type")?.value;
+
+        // userTypeが有効な値の場合は設定
+        if (registerUserType && ["vendor", "owner"].includes(registerUserType)) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { userType: JSON.stringify([registerUserType]) },
+          });
+        }
+
         const existingProfile = await prisma.profile.findUnique({
           where: { userId: user.id },
         });

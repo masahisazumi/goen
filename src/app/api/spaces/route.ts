@@ -46,12 +46,33 @@ export async function GET(request: Request) {
   }
 }
 
+// ユーザータイプをパースするヘルパー関数
+function parseUserTypes(userType: string | null): string[] {
+  if (!userType) return [];
+  try {
+    const parsed = JSON.parse(userType);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    return userType ? [userType] : [];
+  }
+}
+
 // POST: 新規スペースを作成
 export async function POST(request: Request) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+    }
+
+    // スペースオーナー（owner）かどうかをチェック
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { userType: true },
+    });
+    const userTypes = parseUserTypes(user?.userType || null);
+    if (!userTypes.includes("owner")) {
+      return NextResponse.json({ error: "スペース登録はスペースオーナーのみ利用できます" }, { status: 403 });
     }
 
     const body = await request.json();

@@ -315,7 +315,11 @@ export default function RegisterPage() {
                     variant="outline"
                     className="w-full rounded-full"
                     size="lg"
-                    onClick={() => signIn("google", { callbackUrl: "/profile/edit" })}
+                    onClick={() => {
+                      // OAuth登録前にuserTypeをcookieに保存
+                      document.cookie = `register_user_type=${userType}; path=/; max-age=600`;
+                      signIn("google", { callbackUrl: "/profile/edit" });
+                    }}
                     disabled={isLoading}
                   >
                     <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
