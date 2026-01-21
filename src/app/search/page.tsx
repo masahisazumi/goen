@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { Filter, SlidersHorizontal, Grid, List, X } from "lucide-react";
+import { Filter, SlidersHorizontal, Grid, List, X, Loader2 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { SearchBox } from "@/components/common/SearchBox";
@@ -24,7 +24,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { vendors, spaces } from "@/lib/dummy-data";
+
+interface SearchResult {
+  id: string;
+  name: string;
+  image: string;
+  location: string;
+  rating: number;
+  reviewCount: number;
+  tags: string[];
+  description: string;
+}
 
 const categories = [
   "すべて",
@@ -54,6 +64,55 @@ function SearchContent() {
   const [sortBy, setSortBy] = useState("recommended");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+
+  const fetchResults = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedArea !== "すべて") params.set("area", selectedArea);
+      if (selectedCategory !== "すべて") params.set("category", selectedCategory);
+
+      const endpoint = searchType === "vendor" ? "/api/vendors" : "/api/spaces";
+      const res = await fetch(`${endpoint}?${params.toString()}`);
+      const data = await res.json();
+
+      if (searchType === "vendor") {
+        const vendors = data.vendors || [];
+        setResults(vendors.map((v: { userId: string; displayName: string; images: { url: string }[]; user: { image: string }; area: string; averageRating: number; reviewCount: number; tags: string; description: string }) => ({
+          id: v.userId,
+          name: v.displayName,
+          image: v.images?.[0]?.url || v.user?.image || "/placeholder.jpg",
+          location: v.area || "未設定",
+          rating: v.averageRating || 0,
+          reviewCount: v.reviewCount || 0,
+          tags: v.tags ? JSON.parse(v.tags) : [],
+          description: v.description || "",
+        })));
+        setTotal(data.total || 0);
+      } else {
+        const spaces = data.spaces || [];
+        setResults(spaces.map((s: { id: string; name: string; images: { url: string }[]; location: string; _count: { reviews: number }; tags: string; description: string }) => ({
+          id: s.id,
+          name: s.name,
+          image: s.images?.[0]?.url || "/placeholder.jpg",
+          location: s.location,
+          rating: 0,
+          reviewCount: s._count?.reviews || 0,
+          tags: s.tags ? JSON.parse(s.tags) : [],
+          description: s.description || "",
+        })));
+        setTotal(data.total || 0);
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      setResults([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchType, selectedArea, selectedCategory]);
 
   useEffect(() => {
     const type = searchParams.get("type");
@@ -66,7 +125,9 @@ function SearchContent() {
     if (category) setSelectedCategory(category);
   }, [searchParams]);
 
-  const results = searchType === "vendor" ? vendors : spaces;
+  useEffect(() => {
+    fetchResults();
+  }, [fetchResults]);
   const activeFilters = [
     selectedCategory !== "すべて" && selectedCategory,
     selectedArea !== "すべて" && selectedArea,
@@ -264,40 +325,60 @@ function SearchContent() {
 
               {/* Results Count */}
               <div className="text-sm text-muted-foreground">
-                {results.length}件の{searchType === "vendor" ? "出店者" : "スペース"}が見つかりました
+                {total}件の{searchType === "vendor" ? "出店者" : "スペース"}が見つかりました
               </div>
             </div>
 
-            {/* Results Grid */}
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-                  : "flex flex-col gap-4"
-              }
-            >
-              {results.map((item) => (
-                <ProfileCard
-                  key={item.id}
-                  id={item.id}
-                  type={searchType}
-                  name={item.name}
-                  image={item.image}
-                  location={item.location}
-                  rating={item.rating}
-                  reviewCount={item.reviewCount}
-                  tags={item.tags}
-                  description={item.description}
-                />
-              ))}
-            </div>
+            {/* Loading State */}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : results.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-muted-foreground">
+                  {searchType === "vendor" ? "出店者" : "スペース"}が見つかりませんでした
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  条件を変更して再度検索してみてください
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Results Grid */}
+                <div
+                  className={
+                    viewMode === "grid"
+                      ? "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+                      : "flex flex-col gap-4"
+                  }
+                >
+                  {results.map((item) => (
+                    <ProfileCard
+                      key={item.id}
+                      id={item.id}
+                      type={searchType}
+                      name={item.name}
+                      image={item.image}
+                      location={item.location}
+                      rating={item.rating}
+                      reviewCount={item.reviewCount}
+                      tags={item.tags}
+                      description={item.description}
+                    />
+                  ))}
+                </div>
 
-            {/* Load More */}
-            <div className="mt-12 text-center">
-              <Button variant="outline" className="rounded-full">
-                もっと見る
-              </Button>
-            </div>
+                {/* Load More */}
+                {results.length < total && (
+                  <div className="mt-12 text-center">
+                    <Button variant="outline" className="rounded-full">
+                      もっと見る
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </section>
       </main>

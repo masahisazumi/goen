@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -29,15 +30,23 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setIsLoading(true);
     try {
-      await signIn("credentials", {
+      const result = await signIn("credentials", {
         email: formData.email,
         password: formData.password,
-        callbackUrl: "/mypage",
+        redirect: false,
       });
-    } catch (error) {
-      console.error("Login error:", error);
+
+      if (result?.error) {
+        setError("メールアドレスまたはパスワードが正しくありません");
+        return;
+      }
+
+      window.location.href = "/mypage";
+    } catch {
+      setError("ログイン中にエラーが発生しました");
     } finally {
       setIsLoading(false);
     }
@@ -86,10 +95,15 @@ export default function LoginPage() {
             <CardHeader className="text-center pb-2">
               <CardTitle className="text-2xl">おかえりなさい</CardTitle>
               <CardDescription>
-                アカウントにログインして、素敵なご縁を見つけましょう
+                アカウントにログインして、素敵な出店先を見つけましょう
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {error && (
+                <div className="p-3 text-sm text-red-600 bg-red-50 rounded-xl">
+                  {error}
+                </div>
+              )}
               {/* Social Login Buttons */}
               <div className="space-y-3">
                 <Button

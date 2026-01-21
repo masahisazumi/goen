@@ -19,6 +19,7 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
+  password      String?   // Hashed password for credentials login
   accounts      Account[]
   sessions      Session[]
 
@@ -189,4 +190,29 @@ model Booking {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model VerificationRequest {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+
+  documentType String  // "business_license", "id_card", etc.
+  documentUrl  String?
+  status       String  @default("pending") // pending, approved, rejected
+  note         String? // Admin notes or rejection reason
+
+  submittedAt DateTime @default(now())
+  reviewedAt  DateTime?
+  reviewedBy  String?
+}
+
+// ============================================
+// Pre-registration for Coming Soon LP
+// ============================================
+
+model PreRegistration {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  userType    String   // "vendor" (出店者) or "owner" (スペースオーナー)
+  createdAt   DateTime @default(now())
 }

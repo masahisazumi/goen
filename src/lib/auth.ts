@@ -3,7 +3,9 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import Google from "next-auth/providers/google";
 import Line from "next-auth/providers/line";
 import Credentials from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
+import { cookies } from "next/headers";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -24,8 +26,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        // TODO: Implement email/password authentication
-        // This is a placeholder - you'll need to implement proper password hashing
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
@@ -34,13 +34,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           where: { email: credentials.email as string },
         });
 
-        if (!user) {
+        if (!user || !user.password) {
           return null;
         }
 
-        // TODO: Verify password with bcrypt
-        // const isValid = await bcrypt.compare(credentials.password, user.password);
-        // if (!isValid) return null;
+        const isValid = await bcrypt.compare(
+          credentials.password as string,
+          user.password
+        );
+        if (!isValid) {
+          return null;
+        }
 
         return {
           id: user.id,
@@ -75,15 +79,80 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return session;
     },
-    async signIn({ user, account, profile }) {
-      // Allow all sign-ins
+    async signIn({ user, account }) {
+      // アカウントリンクモードの確認
+      const cookieStore = await cookies();
+      const linkUserId = cookieStore.get("link_user_id")?.value;
+
+      if (linkUserId && account) {
+        // アカウントリンクモード: 既存ユーザーにアカウントを追加
+        try {
+          // 同じプロバイダーアカウントが既に存在するか確認
+          const existingAccount = await prisma.account.findFirst({
+            where: {
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+            },
+          });
+
+          if (existingAccount) {
+            // 既に他のユーザーに紐付いている場合はエラー
+            return "/settings/account?error=already_linked";
+          }
+
+          // 既存ユーザーにアカウントを追加
+          await prisma.account.create({
+            data: {
+              userId: linkUserId,
+              type: account.type,
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+              access_token: account.access_token,
+              refresh_token: account.refresh_token,
+              expires_at: account.expires_at,
+              token_type: account.token_type,
+              scope: account.scope,
+              id_token: account.id_token,
+            },
+          });
+
+          // 新しく作成されたユーザーを削除（OAuthで自動作成された場合）
+          if (user.id && user.id !== linkUserId) {
+            await prisma.user.delete({
+              where: { id: user.id },
+            }).catch(() => {
+              // ユーザーが存在しない場合は無視
+            });
+          }
+
+          return "/settings/account?success=linked";
+        } catch (error) {
+          console.error("Account link error:", error);
+          return "/settings/account?error=link_failed";
+        }
+      }
+
+      // 通常のサインイン
       return true;
     },
   },
   events: {
     async createUser({ user }) {
-      // Create a profile when a new user is created
-      console.log("New user created:", user.id);
+      // Create a profile when a new user is created via OAuth
+      if (user.id) {
+        const existingProfile = await prisma.profile.findUnique({
+          where: { userId: user.id },
+        });
+
+        if (!existingProfile) {
+          await prisma.profile.create({
+            data: {
+              userId: user.id,
+              displayName: user.name || "名前未設定",
+            },
+          });
+        }
+      }
     },
   },
 });

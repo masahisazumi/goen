@@ -32,7 +32,7 @@ export function Footer() {
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
                 <Truck className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold text-warm-brown">goen</span>
+              <span className="text-xl font-bold text-warm-brown">てんむすび</span>
             </Link>
             <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
               キッチンカーと出店場所をつなぐ、<br />
@@ -111,7 +111,7 @@ export function Footer() {
         {/* Trust Message */}
         <div className="mt-12 rounded-2xl bg-fresh-green-light/50 p-6 text-center border border-fresh-green/20">
           <p className="text-sm text-warm-brown">
-            goenは、安心・安全なマッチングを心がけています。<br />
+            てんむすびは、安心・安全なマッチングを心がけています。<br />
             本人確認済みユーザーのみが利用でき、トラブル時のサポート体制も整っています。
           </p>
         </div>
@@ -119,7 +119,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 md:flex-row">
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} goen. All rights reserved.
+            &copy; {new Date().getFullYear()} てんむすび. All rights reserved.
           </p>
           <p className="text-xs text-muted-foreground">
             キッチンカーオーナーとスペースオーナーのために

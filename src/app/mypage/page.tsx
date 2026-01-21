@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSession, signOut } from "next-auth/react";
 import {
   User,
-  Settings,
   Heart,
   MessageCircle,
   Calendar,
@@ -18,43 +18,127 @@ import {
   HelpCircle,
   LogOut,
   MapPin,
+  Loader2,
+  Link2,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { vendors, spaces } from "@/lib/dummy-data";
+
+interface Profile {
+  displayName: string;
+  description?: string;
+  category?: string;
+  area?: string;
+  isVerified: boolean;
+}
+
+interface Favorite {
+  id: string;
+  space: {
+    id: string;
+    name: string;
+    location: string;
+    price?: string;
+    images: { url: string }[];
+    _count: { reviews: number };
+  };
+}
+
+interface Booking {
+  id: string;
+  date: string;
+  status: string;
+  space?: { id: string; name: string; location: string };
+}
+
+interface Review {
+  id: string;
+  rating: number;
+  content?: string;
+  createdAt: string;
+  author: { id: string; name?: string; image?: string };
+  space?: { id: string; name: string };
+}
 
 const menuItems = [
   { icon: User, label: "プロフィール編集", href: "/profile/edit" },
+  { icon: Link2, label: "アカウント連携", href: "/settings/account" },
   { icon: Bell, label: "通知設定", href: "/settings/notifications" },
   { icon: Shield, label: "本人確認", href: "/settings/verification", badge: "未確認" },
   { icon: CreditCard, label: "お支払い方法", href: "/settings/payment" },
   { icon: HelpCircle, label: "ヘルプ・FAQ", href: "/faq" },
 ];
 
-const stats = [
-  { label: "お気に入り", value: 12, icon: Heart },
-  { label: "メッセージ", value: 5, icon: MessageCircle, badge: 2 },
-  { label: "予約・申請", value: 3, icon: Calendar },
-  { label: "レビュー", value: 8, icon: Star },
-];
 
 export default function MyPage() {
+  const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState("favorites");
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [favorites, setFavorites] = useState<Favorite[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [stats, setStats] = useState({ favorites: 0, messages: 0, bookings: 0, reviews: 0 });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!session?.user) return;
+      setIsLoading(true);
+
+      try {
+        const [profileRes, favoritesRes, bookingsRes, reviewsRes] = await Promise.all([
+          fetch("/api/profile"),
+          fetch("/api/favorites"),
+          fetch("/api/bookings"),
+          fetch(`/api/reviews?targetId=${session.user.id}`),
+        ]);
+
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          setProfile(profileData);
+        }
+
+        if (favoritesRes.ok) {
+          const favoritesData = await favoritesRes.json();
+          setFavorites(favoritesData);
+          setStats(prev => ({ ...prev, favorites: favoritesData.length }));
+        }
+
+        if (bookingsRes.ok) {
+          const bookingsData = await bookingsRes.json();
+          setBookings(bookingsData);
+          setStats(prev => ({ ...prev, bookings: bookingsData.length }));
+        }
+
+        if (reviewsRes.ok) {
+          const reviewsData = await reviewsRes.json();
+          setReviews(reviewsData.reviews || []);
+          setStats(prev => ({ ...prev, reviews: reviewsData.total || 0 }));
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [session]);
 
   const userProfile = {
-    name: "Cafe Maru",
-    email: "cafe.maru@example.com",
+    name: profile?.displayName || session?.user?.name || "名前未設定",
+    email: session?.user?.email || "",
     type: "vendor" as const,
-    avatar: "https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?w=200&q=80",
-    isVerified: false,
-    location: "東京都渋谷区",
-    category: "キッチンカー",
+    avatar: session?.user?.image || "",
+    isVerified: profile?.isVerified || false,
+    location: profile?.area || "未設定",
+    category: profile?.category || "未設定",
   };
 
   return (
@@ -110,28 +194,41 @@ export default function MyPage() {
 
                   {/* Quick Stats */}
                   <div className="grid grid-cols-2 gap-4">
-                    {stats.map((stat) => (
-                      <Link
-                        key={stat.label}
-                        href={
-                          stat.label === "メッセージ"
-                            ? "/messages"
-                            : `/mypage?tab=${stat.label.toLowerCase()}`
-                        }
-                        className="flex flex-col items-center p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors relative"
-                      >
-                        <stat.icon className="h-5 w-5 text-primary mb-1" />
-                        <span className="text-lg font-semibold">{stat.value}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {stat.label}
-                        </span>
-                        {stat.badge && (
-                          <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
-                            {stat.badge}
-                          </span>
-                        )}
-                      </Link>
-                    ))}
+                    <Link
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); setActiveTab("favorites"); }}
+                      className="flex flex-col items-center p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+                    >
+                      <Heart className="h-5 w-5 text-primary mb-1" />
+                      <span className="text-lg font-semibold">{stats.favorites}</span>
+                      <span className="text-xs text-muted-foreground">お気に入り</span>
+                    </Link>
+                    <Link
+                      href="/messages"
+                      className="flex flex-col items-center p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+                    >
+                      <MessageCircle className="h-5 w-5 text-primary mb-1" />
+                      <span className="text-lg font-semibold">{stats.messages}</span>
+                      <span className="text-xs text-muted-foreground">メッセージ</span>
+                    </Link>
+                    <Link
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); setActiveTab("bookings"); }}
+                      className="flex flex-col items-center p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+                    >
+                      <Calendar className="h-5 w-5 text-primary mb-1" />
+                      <span className="text-lg font-semibold">{stats.bookings}</span>
+                      <span className="text-xs text-muted-foreground">予約・申請</span>
+                    </Link>
+                    <Link
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); setActiveTab("reviews"); }}
+                      className="flex flex-col items-center p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+                    >
+                      <Star className="h-5 w-5 text-primary mb-1" />
+                      <span className="text-lg font-semibold">{stats.reviews}</span>
+                      <span className="text-xs text-muted-foreground">レビュー</span>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>
@@ -161,7 +258,10 @@ export default function MyPage() {
                       </Link>
                     ))}
                     <Separator className="my-2" />
-                    <button className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors w-full text-left text-muted-foreground">
+                    <button
+                      onClick={() => signOut({ callbackUrl: "/" })}
+                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors w-full text-left text-muted-foreground"
+                    >
                       <LogOut className="h-5 w-5" />
                       <span className="text-sm font-medium">ログアウト</span>
                     </button>
@@ -192,146 +292,142 @@ export default function MyPage() {
                 <TabsContent value="favorites" className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h2 className="text-xl font-semibold">お気に入り一覧</h2>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground">
-                      編集
-                    </Button>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {spaces.slice(0, 4).map((space) => (
-                      <Card
-                        key={space.id}
-                        className="border-0 shadow-sm rounded-2xl overflow-hidden"
-                      >
-                        <Link href={`/space/${space.id}`}>
-                          <div className="flex">
-                            <div className="relative w-32 h-32 shrink-0">
-                              <Image
-                                src={space.image}
-                                alt={space.name}
-                                fill
-                                className="object-cover"
-                              />
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : favorites.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Heart className="h-12 w-12 mx-auto text-muted-foreground/30" />
+                      <p className="mt-4 text-muted-foreground">お気に入りはまだありません</p>
+                      <Button asChild className="mt-4 rounded-full">
+                        <Link href="/search?type=space">スペースを探す</Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {favorites.map((fav) => (
+                        <Card
+                          key={fav.id}
+                          className="border-0 shadow-sm rounded-2xl overflow-hidden"
+                        >
+                          <Link href={`/space/${fav.space.id}`}>
+                            <div className="flex">
+                              <div className="relative w-32 h-32 shrink-0 bg-muted">
+                                {fav.space.images?.[0]?.url && (
+                                  <Image
+                                    src={fav.space.images[0].url}
+                                    alt={fav.space.name}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                )}
+                              </div>
+                              <CardContent className="p-4 flex-1">
+                                <h3 className="font-semibold line-clamp-1">
+                                  {fav.space.name}
+                                </h3>
+                                <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                                  <MapPin className="h-3 w-3" />
+                                  <span>{fav.space.location}</span>
+                                </div>
+                                <div className="flex items-center gap-1 mt-2">
+                                  <span className="text-xs text-muted-foreground">
+                                    ({fav.space._count?.reviews || 0}件のレビュー)
+                                  </span>
+                                </div>
+                                {fav.space.price && (
+                                  <p className="mt-2 text-sm font-semibold text-primary">
+                                    {fav.space.price}
+                                  </p>
+                                )}
+                              </CardContent>
                             </div>
-                            <CardContent className="p-4 flex-1">
-                              <h3 className="font-semibold line-clamp-1">
-                                {space.name}
-                              </h3>
-                              <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                                <MapPin className="h-3 w-3" />
-                                <span>{space.location}</span>
-                              </div>
-                              <div className="flex items-center gap-1 mt-2">
-                                <Star className="h-3.5 w-3.5 fill-soft-coral text-soft-coral" />
-                                <span className="text-sm font-medium">
-                                  {space.rating}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                  ({space.reviewCount})
-                                </span>
-                              </div>
-                              <p className="mt-2 text-sm font-semibold text-primary">
-                                {space.price}
-                              </p>
-                            </CardContent>
-                          </div>
-                        </Link>
-                      </Card>
-                    ))}
-                  </div>
+                          </Link>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
                 </TabsContent>
 
                 {/* Bookings Tab */}
                 <TabsContent value="bookings" className="space-y-6">
                   <h2 className="text-xl font-semibold">予約・申請履歴</h2>
-                  <div className="space-y-4">
-                    {[
-                      {
-                        id: "b1",
-                        space: spaces[0],
-                        status: "pending",
-                        date: "2024年2月10日",
-                      },
-                      {
-                        id: "b2",
-                        space: spaces[2],
-                        status: "confirmed",
-                        date: "2024年2月5日",
-                      },
-                      {
-                        id: "b3",
-                        space: spaces[4],
-                        status: "completed",
-                        date: "2024年1月28日",
-                      },
-                    ].map((booking) => (
-                      <Card
-                        key={booking.id}
-                        className="border-0 shadow-sm rounded-2xl"
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-4">
-                            <div className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0">
-                              <Image
-                                src={booking.space.image}
-                                alt={booking.space.name}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <h3 className="font-semibold">
-                                    {booking.space.name}
-                                  </h3>
-                                  <p className="text-sm text-muted-foreground">
-                                    出店希望日: {booking.date}
-                                  </p>
-                                </div>
-                                <Badge
-                                  variant={
-                                    booking.status === "confirmed"
-                                      ? "default"
-                                      : booking.status === "pending"
-                                      ? "secondary"
-                                      : "outline"
-                                  }
-                                  className="rounded-full"
-                                >
-                                  {booking.status === "confirmed"
-                                    ? "確定"
-                                    : booking.status === "pending"
-                                    ? "申請中"
-                                    : "完了"}
-                                </Badge>
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : bookings.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Calendar className="h-12 w-12 mx-auto text-muted-foreground/30" />
+                      <p className="mt-4 text-muted-foreground">予約・申請履歴はまだありません</p>
+                      <Button asChild className="mt-4 rounded-full">
+                        <Link href="/search?type=space">スペースを探す</Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {bookings.map((booking) => (
+                        <Card
+                          key={booking.id}
+                          className="border-0 shadow-sm rounded-2xl"
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-4">
+                              <div className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0 bg-muted flex items-center justify-center">
+                                <Calendar className="h-8 w-8 text-muted-foreground/50" />
                               </div>
-                              <div className="flex gap-2 mt-3">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full"
-                                >
-                                  詳細を見る
-                                </Button>
-                                {booking.status === "confirmed" && (
-                                  <Button
-                                    size="sm"
+                              <div className="flex-1">
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <h3 className="font-semibold">
+                                      {booking.space?.name || "スペース"}
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                      出店希望日: {new Date(booking.date).toLocaleDateString("ja-JP")}
+                                    </p>
+                                  </div>
+                                  <Badge
+                                    variant={
+                                      booking.status === "confirmed"
+                                        ? "default"
+                                        : booking.status === "pending"
+                                        ? "secondary"
+                                        : "outline"
+                                    }
                                     className="rounded-full"
-                                    asChild
                                   >
-                                    <Link href="/messages">
-                                      <MessageCircle className="h-4 w-4 mr-1" />
-                                      メッセージ
-                                    </Link>
-                                  </Button>
-                                )}
+                                    {booking.status === "confirmed"
+                                      ? "確定"
+                                      : booking.status === "pending"
+                                      ? "申請中"
+                                      : booking.status === "cancelled"
+                                      ? "キャンセル"
+                                      : "完了"}
+                                  </Badge>
+                                </div>
+                                <div className="flex gap-2 mt-3">
+                                  {booking.status === "confirmed" && (
+                                    <Button
+                                      size="sm"
+                                      className="rounded-full"
+                                      asChild
+                                    >
+                                      <Link href="/messages">
+                                        <MessageCircle className="h-4 w-4 mr-1" />
+                                        メッセージ
+                                      </Link>
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
                 </TabsContent>
 
                 {/* Reviews Tab */}
@@ -340,69 +436,65 @@ export default function MyPage() {
                     <h2 className="text-xl font-semibold">いただいたレビュー</h2>
                     <div className="flex items-center gap-2">
                       <Star className="h-5 w-5 fill-soft-coral text-soft-coral" />
-                      <span className="font-semibold">4.8</span>
-                      <span className="text-muted-foreground">(8件)</span>
+                      <span className="text-muted-foreground">({stats.reviews}件)</span>
                     </div>
                   </div>
-                  <div className="space-y-4">
-                    {[
-                      {
-                        id: "r1",
-                        author: "代官山カフェ前スペース",
-                        avatar:
-                          "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=100&q=80",
-                        rating: 5,
-                        date: "2024年1月28日",
-                        content:
-                          "とても素敵な出店者さんでした！コーヒーも美味しく、お客様からも大好評でした。また出店をお願いしたいです。",
-                      },
-                      {
-                        id: "r2",
-                        author: "横浜赤レンガ広場",
-                        avatar:
-                          "https://images.unsplash.com/photo-1464219789935-c2d9d9aba644?w=100&q=80",
-                        rating: 5,
-                        date: "2024年1月15日",
-                        content:
-                          "準備も片付けもスムーズで、コミュニケーションも取りやすかったです。接客も丁寧でした。",
-                      },
-                    ].map((review) => (
-                      <Card
-                        key={review.id}
-                        className="border-0 shadow-sm rounded-2xl"
-                      >
-                        <CardContent className="p-5">
-                          <div className="flex items-start gap-4">
-                            <Avatar className="h-12 w-12">
-                              <AvatarImage src={review.avatar} />
-                              <AvatarFallback className="bg-sage-light text-sage">
-                                {review.author[0]}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <p className="font-medium">{review.author}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {review.date}
-                                </p>
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : reviews.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Star className="h-12 w-12 mx-auto text-muted-foreground/30" />
+                      <p className="mt-4 text-muted-foreground">レビューはまだありません</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {reviews.map((review) => (
+                        <Card
+                          key={review.id}
+                          className="border-0 shadow-sm rounded-2xl"
+                        >
+                          <CardContent className="p-5">
+                            <div className="flex items-start gap-4">
+                              <Avatar className="h-12 w-12">
+                                <AvatarImage src={review.author.image || ""} />
+                                <AvatarFallback className="bg-sage-light text-sage">
+                                  {review.author.name?.[0] || "U"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <p className="font-medium">{review.author.name || "ユーザー"}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(review.createdAt).toLocaleDateString("ja-JP")}
+                                  </p>
+                                </div>
+                                <div className="flex gap-0.5 mt-1">
+                                  {[...Array(review.rating)].map((_, i) => (
+                                    <Star
+                                      key={i}
+                                      className="h-4 w-4 fill-soft-coral text-soft-coral"
+                                    />
+                                  ))}
+                                </div>
+                                {review.content && (
+                                  <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+                                    {review.content}
+                                  </p>
+                                )}
+                                {review.space && (
+                                  <p className="mt-2 text-xs text-muted-foreground">
+                                    スペース: {review.space.name}
+                                  </p>
+                                )}
                               </div>
-                              <div className="flex gap-0.5 mt-1">
-                                {[...Array(review.rating)].map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className="h-4 w-4 fill-soft-coral text-soft-coral"
-                                  />
-                                ))}
-                              </div>
-                              <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-                                {review.content}
-                              </p>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>

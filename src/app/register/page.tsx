@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Heart, Eye, EyeOff, ArrowRight, Store, MapPin } from "lucide-react";
+import { signIn } from "next-auth/react";
+import { Heart, Eye, EyeOff, ArrowRight, Store, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,8 @@ export default function RegisterPage() {
   const [step, setStep] = useState(1);
   const [userType, setUserType] = useState<UserType>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -38,10 +41,56 @@ export default function RegisterPage() {
     setStep(2);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would call an API
-    router.push("/profile/edit");
+    setError("");
+
+    // Validate passwords match
+    if (formData.password !== formData.passwordConfirm) {
+      setError("パスワードが一致しません");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Register user
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          name: formData.name,
+          userType,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "登録に失敗しました");
+        return;
+      }
+
+      // Auto login after registration
+      const signInResult = await signIn("credentials", {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      });
+
+      if (signInResult?.error) {
+        setError("ログインに失敗しました。ログインページからお試しください。");
+        return;
+      }
+
+      router.push("/profile/edit");
+    } catch {
+      setError("登録中にエラーが発生しました");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -132,6 +181,11 @@ export default function RegisterPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {error && (
+                  <div className="p-3 text-sm text-red-600 bg-red-50 rounded-xl">
+                    {error}
+                  </div>
+                )}
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">お名前（ニックネーム可）</Label>
@@ -227,9 +281,23 @@ export default function RegisterPage() {
                     </Label>
                   </div>
 
-                  <Button type="submit" className="w-full rounded-full" size="lg">
-                    無料で登録する
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                  <Button
+                    type="submit"
+                    className="w-full rounded-full"
+                    size="lg"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        登録中...
+                      </>
+                    ) : (
+                      <>
+                        無料で登録する
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
                   </Button>
                 </form>
 
@@ -247,6 +315,8 @@ export default function RegisterPage() {
                     variant="outline"
                     className="w-full rounded-full"
                     size="lg"
+                    onClick={() => signIn("google", { callbackUrl: "/profile/edit" })}
+                    disabled={isLoading}
                   >
                     <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
                       <path

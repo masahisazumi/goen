@@ -35,7 +35,7 @@ export function Header({ isLoggedIn = false }: HeaderProps) {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
             <Truck className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold text-warm-brown">goen</span>
+          <span className="text-xl font-bold text-warm-brown">てんむすび</span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -125,7 +125,7 @@ export function Header({ isLoggedIn = false }: HeaderProps) {
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
                   <Truck className="h-5 w-5 text-primary-foreground" />
                 </div>
-                <span className="text-xl font-bold text-warm-brown">goen</span>
+                <span className="text-xl font-bold text-warm-brown">てんむすび</span>
               </Link>
 
               <nav className="flex flex-col gap-4">
