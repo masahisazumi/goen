@@ -6,13 +6,20 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient() {
+  // 本番環境: Tursoを使用
+  // 開発環境: ローカルSQLiteを使用
+  const isProduction = process.env.NODE_ENV === "production";
+  const tursoUrl = process.env.TURSO_DATABASE_URL;
+  const tursoToken = process.env.TURSO_AUTH_TOKEN;
+
   const adapter = new PrismaLibSql({
-    url: "file:prisma/dev.db",
+    url: isProduction && tursoUrl ? tursoUrl : "file:prisma/dev.db",
+    authToken: isProduction && tursoToken ? tursoToken : undefined,
   });
 
   return new PrismaClient({
     adapter,
-    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+    log: isProduction ? ["error"] : ["error", "warn"],
   });
 }
 
