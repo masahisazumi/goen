@@ -96,7 +96,7 @@ export default function HomePage() {
               <div className="mt-10 flex flex-col sm:flex-row gap-4">
                 <Button
                   size="lg"
-                  className="rounded-full bg-primary hover:bg-primary/90 text-white px-8 h-14 text-base shadow-lg"
+                  className="rounded-full px-8 h-14 text-base shadow-lg"
                   asChild
                 >
                   <Link href="/search?type=space">
@@ -106,8 +106,8 @@ export default function HomePage() {
                 </Button>
                 <Button
                   size="lg"
-                  variant="outline"
-                  className="rounded-full border-2 border-white text-white hover:bg-white hover:text-gray-900 px-8 h-14 text-base"
+                  variant="outline-white"
+                  className="rounded-full px-8 h-14 text-base"
                   asChild
                 >
                   <Link href="/search?type=vendor">
@@ -187,7 +187,7 @@ export default function HomePage() {
                 <div className="mt-10 flex flex-col sm:flex-row gap-3">
                   <Button
                     size="lg"
-                    className="rounded-full bg-primary hover:bg-primary/90 px-8"
+                    className="rounded-full px-8"
                     asChild
                   >
                     <Link href="/search?type=space">
@@ -247,7 +247,8 @@ export default function HomePage() {
                 <div className="mt-10 flex flex-col sm:flex-row gap-3">
                   <Button
                     size="lg"
-                    className="rounded-full bg-white text-gray-900 hover:bg-gray-100 px-8"
+                    variant="white"
+                    className="rounded-full px-8"
                     asChild
                   >
                     <Link href="/search?type=vendor">
@@ -257,8 +258,8 @@ export default function HomePage() {
                   </Button>
                   <Button
                     size="lg"
-                    variant="outline"
-                    className="rounded-full border-2 border-white text-white hover:bg-white/10 px-8"
+                    variant="outline-white"
+                    className="rounded-full px-8"
                     asChild
                   >
                     <Link href="/register?type=owner">
@@ -369,7 +370,8 @@ export default function HomePage() {
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
               <Button
                 size="lg"
-                className="rounded-full bg-white text-primary hover:bg-gray-100 px-10 h-14 text-base shadow-lg"
+                variant="white-primary"
+                className="rounded-full px-10 h-14 text-base shadow-lg"
                 asChild
               >
                 <Link href="/register">
@@ -379,8 +381,8 @@ export default function HomePage() {
               </Button>
               <Button
                 size="lg"
-                variant="outline"
-                className="rounded-full border-2 border-white text-white hover:bg-white/10 px-10 h-14 text-base"
+                variant="outline-white"
+                className="rounded-full px-10 h-14 text-base"
                 asChild
               >
                 <Link href="/contact">

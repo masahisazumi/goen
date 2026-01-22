@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { Heart, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
+import { Logo } from "@/components/common/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,15 +76,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-dusty-pink-light/20 to-background flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="py-6 px-4">
+      <header className="py-6 px-4 bg-white border-b border-gray-100">
         <div className="container mx-auto">
-          <Link href="/" className="flex items-center gap-2 w-fit">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
-              <Heart className="h-5 w-5 text-primary-foreground" fill="currentColor" />
+          <Link href="/" className="flex items-center gap-4 w-fit">
+            <Logo size={72} />
+            <div className="flex flex-col">
+              <span className="text-3xl font-bold tracking-wide text-[#d35f2d]">てんむすび</span>
+              <span className="text-xs text-[#8b7355] tracking-wider">出店者 × スペース マッチング</span>
             </div>
-            <span className="text-xl font-semibold text-warm-brown">goen</span>
           </Link>
         </div>
       </header>
@@ -93,9 +95,9 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           <Card className="rounded-2xl border-0 shadow-md">
             <CardHeader className="text-center pb-2">
-              <CardTitle className="text-2xl">おかえりなさい</CardTitle>
+              <CardTitle className="text-2xl">ログイン</CardTitle>
               <CardDescription>
-                アカウントにログインして、素敵な出店先を見つけましょう
+                アカウントにログインして、出店先やスペースを探しましょう
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -257,9 +259,9 @@ export default function LoginPage() {
       </main>
 
       {/* Footer */}
-      <footer className="py-6 text-center">
-        <p className="text-sm text-muted-foreground">
-          &copy; {new Date().getFullYear()} goen. All rights reserved.
+      <footer className="py-6 text-center bg-white border-t border-gray-100">
+        <p className="text-sm text-gray-500">
+          &copy; {new Date().getFullYear()} てんむすび. All rights reserved.
         </p>
       </footer>
     </div>

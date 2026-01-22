@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { Menu, User, MessageCircle, Search, Truck, ArrowRight } from "lucide-react";
+import { Menu, User, MessageCircle, Search, ArrowRight } from "lucide-react";
+import { Logo } from "@/components/common/Logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
@@ -30,13 +31,14 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-100">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+      <div className="container mx-auto flex h-24 items-center justify-between px-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900">
-            <Truck className="h-5 w-5 text-white" />
+        <Link href="/" className="flex items-center gap-4">
+          <Logo size={72} />
+          <div className="flex flex-col">
+            <span className="text-3xl font-bold tracking-wide text-[#d35f2d]">てんむすび</span>
+            <span className="text-xs text-[#8b7355] tracking-wider">出店者 × スペース マッチング</span>
           </div>
-          <span className="text-xl font-bold tracking-tight">てんむすび</span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -128,11 +130,12 @@ export function Header() {
           </SheetTrigger>
           <SheetContent side="right" className="w-[300px] sm:w-[350px] bg-white">
             <div className="flex flex-col gap-6 pt-6">
-              <Link href="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900">
-                  <Truck className="h-5 w-5 text-white" />
+              <Link href="/" className="flex items-center gap-4" onClick={() => setOpen(false)}>
+                <Logo size={72} />
+                <div className="flex flex-col">
+                  <span className="text-3xl font-bold tracking-wide text-[#d35f2d]">てんむすび</span>
+                  <span className="text-xs text-[#8b7355] tracking-wider">出店者 × スペース マッチング</span>
                 </div>
-                <span className="text-xl font-bold tracking-tight">てんむすび</span>
               </Link>
 
               <nav className="flex flex-col gap-4">
