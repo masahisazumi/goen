@@ -4,6 +4,11 @@ import { NextResponse } from "next/server";
 // Coming soon mode - set COMING_SOON_MODE=true in production to enable
 const isComingSoonMode = process.env.COMING_SOON_MODE === "true";
 
+// Base URL for redirects (use AUTH_URL or request origin)
+const getBaseUrl = (requestOrigin: string) => {
+  return process.env.AUTH_URL || requestOrigin;
+};
+
 // Routes that require authentication
 const protectedRoutes = [
   "/mypage",
@@ -42,7 +47,8 @@ export default auth((req) => {
     );
 
     if (pathname === "/" || (!isAllowedRoute && !pathname.startsWith("/api"))) {
-      return NextResponse.redirect(new URL("/coming-soon", nextUrl.origin));
+      const baseUrl = getBaseUrl(nextUrl.origin);
+      return NextResponse.redirect(new URL("/coming-soon", baseUrl));
     }
   }
 
@@ -56,16 +62,18 @@ export default auth((req) => {
     pathname.startsWith(route)
   );
 
+  const baseUrl = getBaseUrl(nextUrl.origin);
+
   // Redirect to login if trying to access protected route without auth
   if (isProtectedRoute && !isLoggedIn) {
-    const loginUrl = new URL("/login", nextUrl.origin);
+    const loginUrl = new URL("/login", baseUrl);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   // Redirect to mypage if already logged in and trying to access auth routes
   if (isAuthRoute && isLoggedIn) {
-    return NextResponse.redirect(new URL("/mypage", nextUrl.origin));
+    return NextResponse.redirect(new URL("/mypage", baseUrl));
   }
 
   return NextResponse.next();
