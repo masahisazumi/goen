@@ -1,6 +1,9 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
+// Coming soon mode - set COMING_SOON_MODE=true in production to enable
+const isComingSoonMode = process.env.COMING_SOON_MODE === "true";
+
 // Routes that require authentication
 const protectedRoutes = [
   "/mypage",
@@ -15,10 +18,29 @@ const authRoutes = [
   "/register",
 ];
 
+// Routes allowed during coming soon mode
+const comingSoonAllowedRoutes = [
+  "/coming-soon",
+  "/privacy-policy",
+  "/terms",
+  "/contact",
+];
+
 export default auth((req) => {
   const { nextUrl } = req;
   const isLoggedIn = !!req.auth;
   const pathname = nextUrl.pathname;
+
+  // Coming soon mode: redirect top page to /coming-soon
+  if (isComingSoonMode) {
+    const isAllowedRoute = comingSoonAllowedRoutes.some(route =>
+      pathname.startsWith(route)
+    );
+
+    if (pathname === "/" || (!isAllowedRoute && !pathname.startsWith("/api"))) {
+      return NextResponse.redirect(new URL("/coming-soon", nextUrl.origin));
+    }
+  }
 
   // Check if the route is protected
   const isProtectedRoute = protectedRoutes.some(route =>
