@@ -14,9 +14,9 @@ const footerLinks = {
     { name: "運営会社", href: "/company" },
   ],
   legal: [
-    { name: "利用規約", href: "/terms" },
+    { name: "利用規約", href: "/tos" },
     { name: "プライバシーポリシー", href: "/privacy" },
-    { name: "特定商取引法に基づく表記", href: "/legal" },
+    { name: "特定商取引法に基づく表記", href: "/terms" },
   ],
 };
 

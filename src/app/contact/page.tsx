@@ -58,6 +58,8 @@ const faqItems = [
 export default function ContactPage() {
   const router = useRouter();
   const [submitted, setSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -83,10 +85,32 @@ export default function ContactPage() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would send the form data to an API
-    setSubmitted(true);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "送信に失敗しました");
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "送信に失敗しました");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (submitted) {
@@ -223,9 +247,26 @@ export default function ContactPage() {
                       </p>
                     </div>
 
-                    <Button type="submit" className="w-full rounded-full" size="lg">
-                      <Send className="mr-2 h-4 w-4" />
-                      送信する
+                    {error && (
+                      <div className="bg-red-50 text-red-600 rounded-xl p-4 text-sm">
+                        {error}
+                      </div>
+                    )}
+
+                    <Button
+                      type="submit"
+                      className="w-full rounded-full"
+                      size="lg"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        "送信中..."
+                      ) : (
+                        <>
+                          <Send className="mr-2 h-4 w-4" />
+                          送信する
+                        </>
+                      )}
                     </Button>
                   </form>
                 </CardContent>
