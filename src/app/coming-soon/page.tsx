@@ -4,18 +4,19 @@ import { useState } from "react";
 import Image from "next/image";
 import {
   ArrowRight,
-  Truck,
   MapPin,
   Users,
   Shield,
   CheckCircle2,
   Loader2,
   ChevronDown,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Logo } from "@/components/common/Logo";
 
 const features = [
   {
@@ -34,7 +35,7 @@ const features = [
     description: "日本全国のスペースを検索・掲載可能。地域を選ばず活用できます。",
   },
   {
-    icon: Truck,
+    icon: Sparkles,
     title: "無料で利用開始",
     description: "登録料・月額費用は一切かかりません。成約時のみ手数料が発生します。",
   },
@@ -97,11 +98,12 @@ export default function ComingSoonPage() {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-100">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-white">
-              <Truck className="h-5 w-5" />
+          <div className="flex items-center gap-3">
+            <Logo size={40} animate={false} />
+            <div className="flex flex-col">
+              <span className="text-xl font-bold tracking-tight text-[#d35f2d]">てんむすび</span>
+              <span className="text-[10px] text-[#8b7355] tracking-wider">出店者 × スペース マッチング</span>
             </div>
-            <span className="text-xl font-bold tracking-tight">てんむすび</span>
           </div>
           <Button
             onClick={scrollToForm}
@@ -378,11 +380,12 @@ export default function ComingSoonPage() {
       {/* Footer */}
       <footer className="py-8 px-4 bg-gray-900 border-t border-gray-800">
         <div className="container mx-auto text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-900">
-              <Truck className="h-4 w-4" />
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Logo size={36} animate={false} />
+            <div className="flex flex-col items-start">
+              <span className="text-lg font-bold text-white">てんむすび</span>
+              <span className="text-[10px] text-gray-400">出店者 × スペース マッチング</span>
             </div>
-            <span className="text-lg font-bold text-white">てんむすび</span>
           </div>
           <p className="text-sm text-gray-500">
             &copy; {new Date().getFullYear()} てんむすび. All rights reserved.

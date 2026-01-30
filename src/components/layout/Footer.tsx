@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Truck, Instagram, Twitter } from "lucide-react";
+import { Instagram, Twitter } from "lucide-react";
+import { Logo } from "@/components/common/Logo";
 
 const footerLinks = {
   service: [
@@ -28,11 +29,12 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div className="lg:col-span-1">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white">
-                <Truck className="h-5 w-5 text-gray-900" />
+            <Link href="/" className="flex items-center gap-3">
+              <Logo size={40} animate={false} />
+              <div className="flex flex-col">
+                <span className="text-xl font-bold text-white">てんむすび</span>
+                <span className="text-xs text-gray-400">出店者 × スペース マッチング</span>
               </div>
-              <span className="text-xl font-bold">てんむすび</span>
             </Link>
             <p className="mt-4 text-sm text-gray-400 leading-relaxed">
               キッチンカーやハンドメイド作家と、
