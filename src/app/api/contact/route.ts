@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     // Send email to admin
     const { error } = await resend.emails.send({
-      from: "てんむすび <onboarding@resend.dev>",
+      from: "てんむすび <noreply@tenmusubi.net>",
       to: process.env.CONTACT_EMAIL || "info@example.com",
       replyTo: email,
       subject: `【お問い合わせ】${subject}`,
