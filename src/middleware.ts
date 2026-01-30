@@ -24,6 +24,10 @@ const comingSoonAllowedRoutes = [
   "/privacy-policy",
   "/terms",
   "/contact",
+  "/login",
+  "/register",
+  "/admin",
+  "/mypage",
 ];
 
 export default auth((req) => {
