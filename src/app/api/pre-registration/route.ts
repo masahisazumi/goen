@@ -73,55 +73,26 @@ export async function POST(request: NextRequest) {
 async function sendEmails(email: string, userType: string) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.error("RESEND_API_KEY is not configured");
+    console.error("[Pre-registration] RESEND_API_KEY is not configured");
     return;
   }
+
+  console.log("[Pre-registration] Starting email send to:", email);
 
   const resend = new Resend(apiKey);
   const userTypeLabel = userType === "vendor" ? "出店者" : "スペースオーナー";
 
   // 1. Send auto-reply to user
-  await resend.emails.send({
-    from: "てんむすび <noreply@tenmusubi.net>",
-    to: email,
-    subject: "【てんむすび】先行登録ありがとうございます",
-    html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1f2937;">先行登録ありがとうございます</h2>
-        <p>この度は「てんむすび」に先行登録いただき、誠にありがとうございます。</p>
-        <p>ご登録内容：</p>
-        <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
-          <tr>
-            <td style="padding: 10px; border: 1px solid #e5e7eb; background: #f9fafb; width: 140px;"><strong>メールアドレス</strong></td>
-            <td style="padding: 10px; border: 1px solid #e5e7eb;">${email}</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; border: 1px solid #e5e7eb; background: #f9fafb;"><strong>ご利用目的</strong></td>
-            <td style="padding: 10px; border: 1px solid #e5e7eb;">${userTypeLabel}</td>
-          </tr>
-        </table>
-        <p>サービス開始時には、いち早くご案内のメールをお送りいたします。</p>
-        <p>今しばらくお待ちください。</p>
-        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
-        <p style="color: #6b7280; font-size: 14px;">
-          てんむすび - キッチンカー・出店マッチングサービス<br />
-          <a href="https://tenmusubi.net" style="color: #3b82f6;">https://tenmusubi.net</a>
-        </p>
-      </div>
-    `,
-  });
-
-  // 2. Send notification to admin
-  const adminEmail = process.env.CONTACT_EMAIL;
-  if (adminEmail) {
-    await resend.emails.send({
+  try {
+    const { data, error } = await resend.emails.send({
       from: "てんむすび <noreply@tenmusubi.net>",
-      to: adminEmail,
-      subject: `【てんむすび】新規先行登録がありました（${userTypeLabel}）`,
+      to: email,
+      subject: "【てんむすび】先行登録ありがとうございます",
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1f2937;">新規先行登録のお知らせ</h2>
-          <p>新しい先行登録がありました。</p>
+          <h2 style="color: #1f2937;">先行登録ありがとうございます</h2>
+          <p>この度は「てんむすび」に先行登録いただき、誠にありがとうございます。</p>
+          <p>ご登録内容：</p>
           <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
             <tr>
               <td style="padding: 10px; border: 1px solid #e5e7eb; background: #f9fafb; width: 140px;"><strong>メールアドレス</strong></td>
@@ -131,18 +102,71 @@ async function sendEmails(email: string, userType: string) {
               <td style="padding: 10px; border: 1px solid #e5e7eb; background: #f9fafb;"><strong>ご利用目的</strong></td>
               <td style="padding: 10px; border: 1px solid #e5e7eb;">${userTypeLabel}</td>
             </tr>
-            <tr>
-              <td style="padding: 10px; border: 1px solid #e5e7eb; background: #f9fafb;"><strong>登録日時</strong></td>
-              <td style="padding: 10px; border: 1px solid #e5e7eb;">${new Date().toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}</td>
-            </tr>
           </table>
-          <p>
-            <a href="https://tenmusubi.net/admin/pre-registrations" style="color: #3b82f6;">
-              管理画面で確認する →
-            </a>
+          <p>サービス開始時には、いち早くご案内のメールをお送りいたします。</p>
+          <p>今しばらくお待ちください。</p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
+          <p style="color: #6b7280; font-size: 14px;">
+            てんむすび - キッチンカー・出店マッチングサービス<br />
+            <a href="https://tenmusubi.net" style="color: #3b82f6;">https://tenmusubi.net</a>
           </p>
         </div>
       `,
     });
+
+    if (error) {
+      console.error("[Pre-registration] User email error:", error);
+    } else {
+      console.log("[Pre-registration] User email sent:", data?.id);
+    }
+  } catch (err) {
+    console.error("[Pre-registration] User email exception:", err);
+  }
+
+  // 2. Send notification to admin
+  const adminEmail = process.env.CONTACT_EMAIL;
+  if (adminEmail) {
+    try {
+      const { data, error } = await resend.emails.send({
+        from: "てんむすび <noreply@tenmusubi.net>",
+        to: adminEmail,
+        subject: `【てんむすび】新規先行登録がありました（${userTypeLabel}）`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1f2937;">新規先行登録のお知らせ</h2>
+            <p>新しい先行登録がありました。</p>
+            <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
+              <tr>
+                <td style="padding: 10px; border: 1px solid #e5e7eb; background: #f9fafb; width: 140px;"><strong>メールアドレス</strong></td>
+                <td style="padding: 10px; border: 1px solid #e5e7eb;">${email}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #e5e7eb; background: #f9fafb;"><strong>ご利用目的</strong></td>
+                <td style="padding: 10px; border: 1px solid #e5e7eb;">${userTypeLabel}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #e5e7eb; background: #f9fafb;"><strong>登録日時</strong></td>
+                <td style="padding: 10px; border: 1px solid #e5e7eb;">${new Date().toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}</td>
+              </tr>
+            </table>
+            <p>
+              <a href="https://tenmusubi.net/admin/pre-registrations" style="color: #3b82f6;">
+                管理画面で確認する →
+              </a>
+            </p>
+          </div>
+        `,
+      });
+
+      if (error) {
+        console.error("[Pre-registration] Admin email error:", error);
+      } else {
+        console.log("[Pre-registration] Admin email sent:", data?.id);
+      }
+    } catch (err) {
+      console.error("[Pre-registration] Admin email exception:", err);
+    }
+  } else {
+    console.log("[Pre-registration] CONTACT_EMAIL not configured, skipping admin notification");
   }
 }
