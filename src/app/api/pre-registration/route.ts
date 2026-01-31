@@ -52,10 +52,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Send emails (non-blocking)
-    sendEmails(email, userType).catch((err) => {
-      console.error("Email sending failed:", err);
-    });
+    // Send emails (await to ensure completion before function ends)
+    await sendEmails(email, userType);
 
     return NextResponse.json(
       { message: "先行登録が完了しました", id: registration.id },
