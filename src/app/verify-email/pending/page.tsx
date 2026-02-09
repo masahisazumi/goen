@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Mail, Loader2, CheckCircle2 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-export default function VerifyEmailPendingPage() {
+function VerifyEmailPendingContent() {
+  const searchParams = useSearchParams();
+  const email = searchParams.get("email");
   const [isResending, setIsResending] = useState(false);
   const [resendStatus, setResendStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
@@ -51,9 +54,14 @@ export default function VerifyEmailPendingPage() {
               </div>
 
               <div className="space-y-2">
-                <h2 className="text-xl font-bold text-gray-900">メールアドレスの確認が必要です</h2>
+                <h2 className="text-xl font-bold text-gray-900">確認メールを送信しました</h2>
+                {email && (
+                  <p className="text-sm font-medium text-gray-800 bg-gray-100 rounded-lg py-2 px-3 break-all">
+                    {email}
+                  </p>
+                )}
                 <p className="text-gray-600 text-sm">
-                  ご登録いただいたメールアドレスに確認メールを送信しています。
+                  上記のメールアドレスに確認メールを送信しました。
                   メール内のリンクをクリックして、アカウントを有効にしてください。
                 </p>
               </div>
@@ -87,7 +95,7 @@ export default function VerifyEmailPendingPage() {
                 </Button>
 
                 <Button asChild variant="outline" className="w-full rounded-full" size="lg">
-                  <Link href="/mypage">マイページへ戻る</Link>
+                  <Link href="/login">ログインページへ</Link>
                 </Button>
               </div>
 
@@ -101,5 +109,17 @@ export default function VerifyEmailPendingPage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function VerifyEmailPendingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    }>
+      <VerifyEmailPendingContent />
+    </Suspense>
   );
 }

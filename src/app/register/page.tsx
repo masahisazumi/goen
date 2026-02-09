@@ -87,19 +87,8 @@ function RegisterContent() {
         return;
       }
 
-      // Auto login after registration
-      const signInResult = await signIn("credentials", {
-        email: formData.email,
-        password: formData.password,
-        redirect: false,
-      });
-
-      if (signInResult?.error) {
-        setError("ログインに失敗しました。ログインページからお試しください。");
-        return;
-      }
-
-      router.push("/profile/edit");
+      // メール確認画面へ遷移
+      router.push(`/verify-email/pending?email=${encodeURIComponent(formData.email)}`);
     } catch {
       setError("登録中にエラーが発生しました");
     } finally {

@@ -6,7 +6,8 @@ import { prisma } from "@/lib/prisma";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const location = searchParams.get("location");
+    const location = searchParams.get("location") || searchParams.get("area");
+    const category = searchParams.get("category");
     const query = searchParams.get("q");
     const limit = parseInt(searchParams.get("limit") || "20");
     const offset = parseInt(searchParams.get("offset") || "0");
@@ -17,10 +18,15 @@ export async function GET(request: Request) {
       where.location = { contains: location };
     }
 
+    if (category) {
+      where.tags = { contains: category };
+    }
+
     if (query) {
       where.OR = [
         { name: { contains: query } },
         { description: { contains: query } },
+        { location: { contains: query } },
         { tags: { contains: query } },
       ];
     }

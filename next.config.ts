@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "images.unsplash.com",
       },
+      {
+        protocol: "https",
+        hostname: "picsum.photos",
+      },
       ...(r2Hostname
         ? [{ protocol: "https" as const, hostname: r2Hostname }]
         : []),
