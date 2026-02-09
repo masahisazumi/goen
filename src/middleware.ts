@@ -33,6 +33,17 @@ const comingSoonAllowedRoutes = [
   "/register",
   "/admin",
   "/mypage",
+  "/verify-email",
+  "/forgot-password",
+  "/reset-password",
+];
+
+// Routes that unverified email users can still access
+const emailVerificationExemptRoutes = [
+  "/mypage",
+  "/profile/edit",
+  "/settings",
+  "/verify-email",
 ];
 
 export default auth((req) => {
@@ -74,6 +85,18 @@ export default auth((req) => {
   // Redirect to mypage if already logged in and trying to access auth routes
   if (isAuthRoute && isLoggedIn) {
     return NextResponse.redirect(new URL("/mypage", baseUrl));
+  }
+
+  // Email verification check for logged-in users
+  if (isLoggedIn && isProtectedRoute) {
+    const emailVerified = req.auth?.user?.emailVerified;
+    const isExempt = emailVerificationExemptRoutes.some(route =>
+      pathname.startsWith(route)
+    );
+
+    if (!emailVerified && !isExempt) {
+      return NextResponse.redirect(new URL("/verify-email/pending", baseUrl));
+    }
   }
 
   return NextResponse.next();

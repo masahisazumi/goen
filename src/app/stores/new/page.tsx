@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
 import {
   ArrowLeft,
   ArrowRight,
@@ -16,6 +17,7 @@ import {
   Instagram,
   Twitter,
   ShieldAlert,
+  X,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -63,6 +65,8 @@ export default function NewStorePage() {
     twitter: "",
   });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isCheckingRole, setIsCheckingRole] = useState(true);
   const [isVendor, setIsVendor] = useState(false);
 
@@ -131,6 +135,17 @@ export default function NewStorePage() {
       if (!response.ok) {
         setError(data.error || "店舗の登録に失敗しました");
         return;
+      }
+
+      // Upload images
+      if (imageFiles.length > 0 && data.id) {
+        for (const file of imageFiles) {
+          const uploadData = new FormData();
+          uploadData.append("file", file);
+          uploadData.append("type", "store");
+          uploadData.append("targetId", data.id);
+          await fetch("/api/upload", { method: "POST", body: uploadData });
+        }
       }
 
       setIsSuccess(true);
@@ -232,6 +247,8 @@ export default function NewStorePage() {
                         twitter: "",
                       });
                       setSelectedTags([]);
+                      setImageFiles([]);
+                      setImagePreviews([]);
                     }}
                   >
                     続けて登録する
@@ -448,24 +465,63 @@ export default function NewStorePage() {
                   </CardContent>
                 </Card>
 
-                {/* 画像アップロード（プレースホルダー） */}
+                {/* 画像アップロード */}
                 <Card className="rounded-2xl border-0 shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-lg">店舗画像</CardTitle>
                     <CardDescription>
-                      店舗や商品の写真を追加してください（任意）
+                      店舗や商品の写真を追加してください（任意・最大5枚）
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center">
-                      <ImagePlus className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-                      <p className="text-sm text-gray-600">
-                        画像アップロード機能は準備中です
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        登録後にマイページから追加できます
-                      </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {imagePreviews.map((preview, index) => (
+                        <div key={index} className="relative aspect-square rounded-xl overflow-hidden bg-gray-100">
+                          <Image
+                            src={preview}
+                            alt={`店舗画像 ${index + 1}`}
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                          <button
+                            type="button"
+                            className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                            onClick={() => {
+                              setImageFiles((prev) => prev.filter((_, i) => i !== index));
+                              setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                      {imagePreviews.length < 5 && (
+                        <label className="aspect-square rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors">
+                          <ImagePlus className="h-8 w-8 text-gray-400 mb-1" />
+                          <span className="text-xs text-gray-500">追加</span>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                if (file.size > 5 * 1024 * 1024) {
+                                  setError("ファイルサイズは5MB以下にしてください");
+                                  return;
+                                }
+                                setImageFiles((prev) => [...prev, file]);
+                                setImagePreviews((prev) => [...prev, URL.createObjectURL(file)]);
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
                     </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      JPG, PNG, WebP, GIF（各5MB以下）
+                    </p>
                   </CardContent>
                 </Card>
 

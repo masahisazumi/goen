@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { unlink } from "fs/promises";
-import { join } from "path";
 import { prisma } from "@/lib/prisma";
+import { deleteFile } from "@/lib/storage";
 
 // DELETE: 画像を削除
 export async function DELETE(
@@ -17,10 +16,9 @@ export async function DELETE(
 
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get("type"); // "profile" or "space"
+    const type = searchParams.get("type"); // "profile", "space", or "store"
 
     if (type === "profile") {
-      // Find the profile image
       const profileImage = await prisma.profileImage.findUnique({
         where: { id },
         include: { profile: true },
@@ -30,7 +28,6 @@ export async function DELETE(
         return NextResponse.json({ error: "画像が見つかりません" }, { status: 404 });
       }
 
-      // Verify ownership
       if (profileImage.profile.userId !== session.user.id) {
         return NextResponse.json(
           { error: "この画像を削除する権限がありません" },
@@ -38,21 +35,9 @@ export async function DELETE(
         );
       }
 
-      // Delete file from filesystem
-      if (profileImage.url.startsWith("/uploads/")) {
-        const filename = profileImage.url.replace("/uploads/", "");
-        const filepath = join(process.cwd(), "public", "uploads", filename);
-        try {
-          await unlink(filepath);
-        } catch {
-          // File might not exist
-        }
-      }
-
-      // Delete from database
+      await deleteFile(profileImage.url);
       await prisma.profileImage.delete({ where: { id } });
     } else if (type === "space") {
-      // Find the space image
       const spaceImage = await prisma.spaceImage.findUnique({
         where: { id },
         include: { space: true },
@@ -62,7 +47,6 @@ export async function DELETE(
         return NextResponse.json({ error: "画像が見つかりません" }, { status: 404 });
       }
 
-      // Verify ownership
       if (spaceImage.space.ownerId !== session.user.id) {
         return NextResponse.json(
           { error: "この画像を削除する権限がありません" },
@@ -70,19 +54,27 @@ export async function DELETE(
         );
       }
 
-      // Delete file from filesystem
-      if (spaceImage.url.startsWith("/uploads/")) {
-        const filename = spaceImage.url.replace("/uploads/", "");
-        const filepath = join(process.cwd(), "public", "uploads", filename);
-        try {
-          await unlink(filepath);
-        } catch {
-          // File might not exist
-        }
+      await deleteFile(spaceImage.url);
+      await prisma.spaceImage.delete({ where: { id } });
+    } else if (type === "store") {
+      const storeImage = await prisma.storeImage.findUnique({
+        where: { id },
+        include: { store: true },
+      });
+
+      if (!storeImage) {
+        return NextResponse.json({ error: "画像が見つかりません" }, { status: 404 });
       }
 
-      // Delete from database
-      await prisma.spaceImage.delete({ where: { id } });
+      if (storeImage.store.ownerId !== session.user.id) {
+        return NextResponse.json(
+          { error: "この画像を削除する権限がありません" },
+          { status: 403 }
+        );
+      }
+
+      await deleteFile(storeImage.url);
+      await prisma.storeImage.delete({ where: { id } });
     } else {
       return NextResponse.json({ error: "typeパラメータが必要です" }, { status: 400 });
     }

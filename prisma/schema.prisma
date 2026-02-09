@@ -26,8 +26,13 @@ model User {
   // Service-specific fields
   userType      String?   // JSON array: ["vendor"], ["owner"], or ["vendor", "owner"]
   isAdmin       Boolean   @default(false)
+  notificationSettings String? // JSON object for notification preferences
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  // Stripe
+  stripeCustomerId  String?  @unique
+  subscription      Subscription?
 
   // Relations
   profile       Profile?
@@ -37,6 +42,7 @@ model User {
   favorites     Favorite[]
   reviewsGiven  Review[]  @relation("ReviewsGiven")
   reviewsReceived Review[] @relation("ReviewsReceived")
+  notifications Notification[]
 }
 
 model Account {
@@ -239,6 +245,32 @@ model VerificationRequest {
   reviewedBy  String?
 }
 
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      String   // "message", "booking", "review"
+  title     String
+  body      String
+  link      String?  // リンク先URL
+  isRead    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+model FaqItem {
+  id          String   @id @default(cuid())
+  question    String
+  answer      String
+  category    String   @default("general") // "general", "account", "matching", "payment", "other"
+  order       Int      @default(0)
+  isPublished Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 // ============================================
 // Pre-registration for Coming Soon LP
 // ============================================
@@ -248,4 +280,21 @@ model PreRegistration {
   email       String   @unique
   userType    String   // "vendor" (出店者) or "owner" (スペースオーナー)
   createdAt   DateTime @default(now())
+}
+
+// ============================================
+// Stripe Subscription
+// ============================================
+
+model Subscription {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeSubscriptionId   String   @unique
+  stripePriceId          String
+  stripeCurrentPeriodEnd DateTime
+  status                 String   @default("active") // active, canceled, past_due, unpaid
+  cancelAtPeriodEnd      Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 }

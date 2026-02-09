@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Search, Send, MoreVertical, ChevronLeft, Loader2, MessageCircle } from "lucide-react";
 import { Header } from "@/components/layout/Header";
@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+
+const CONVERSATION_POLL_INTERVAL = 30000; // 30秒
+const MESSAGE_POLL_INTERVAL = 10000; // 10秒
 
 interface Conversation {
   partnerId: string;
@@ -43,59 +46,139 @@ export default function MessagesPage() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isAtBottomRef = useRef(true);
 
-  // Fetch conversations
-  useEffect(() => {
-    const fetchConversations = async () => {
-      try {
-        const res = await fetch("/api/messages");
-        if (res.ok) {
-          const data = await res.json();
-          setConversations(data);
-          if (data.length > 0 && !selectedPartnerId) {
-            setSelectedPartnerId(data[0].partnerId);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching conversations:", error);
-      } finally {
-        setIsLoadingConversations(false);
-      }
-    };
-    fetchConversations();
-  }, [selectedPartnerId]);
+  // 最後のメッセージIDを追跡（差分ポーリング用）
+  const lastMessageIdRef = useRef<string | null>(null);
 
-  // Fetch messages for selected conversation
-  useEffect(() => {
-    const fetchMessages = async () => {
-      if (!selectedPartnerId) return;
-      setIsLoadingMessages(true);
-      try {
-        const res = await fetch(`/api/messages/${selectedPartnerId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setMessages(data.messages || []);
-          setPartner(data.partner);
-        }
-      } catch (error) {
-        console.error("Error fetching messages:", error);
-      } finally {
-        setIsLoadingMessages(false);
-      }
-    };
-    fetchMessages();
-  }, [selectedPartnerId]);
+  // スクロールが一番下にあるか追跡
+  const checkIfAtBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const threshold = 50;
+    isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  }, []);
 
-  // Scroll to bottom when messages change
-  useEffect(() => {
+  // 下にスクロール
+  const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, []);
+
+  // 会話一覧を取得
+  const fetchConversations = useCallback(async () => {
+    try {
+      const res = await fetch("/api/messages");
+      if (res.ok) {
+        const data = await res.json();
+        setConversations(data);
+        return data;
+      }
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+    }
+    return null;
+  }, []);
+
+  // 初回ロード
+  useEffect(() => {
+    const init = async () => {
+      const data = await fetchConversations();
+      if (data && data.length > 0 && !selectedPartnerId) {
+        setSelectedPartnerId(data[0].partnerId);
+      }
+      setIsLoadingConversations(false);
+    };
+    init();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 会話一覧のポーリング（30秒間隔）
+  useEffect(() => {
+    const interval = setInterval(fetchConversations, CONVERSATION_POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, [fetchConversations]);
+
+  // 選択した会話のメッセージを全件取得
+  const fetchAllMessages = useCallback(async (partnerId: string) => {
+    setIsLoadingMessages(true);
+    try {
+      const res = await fetch(`/api/messages/${partnerId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const msgs = data.messages || [];
+        setMessages(msgs);
+        setPartner(data.partner);
+        lastMessageIdRef.current = msgs.length > 0 ? msgs[msgs.length - 1].id : null;
+      }
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  }, []);
+
+  // 新着メッセージの差分取得（ポーリング用）
+  const fetchNewMessages = useCallback(async (partnerId: string) => {
+    const afterId = lastMessageIdRef.current;
+    if (!afterId) return;
+
+    try {
+      const res = await fetch(`/api/messages/${partnerId}?after=${afterId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const newMsgs: Message[] = data.messages || [];
+        if (newMsgs.length > 0) {
+          setMessages(prev => [...prev, ...newMsgs]);
+          lastMessageIdRef.current = newMsgs[newMsgs.length - 1].id;
+
+          // 会話一覧も更新
+          const latestMsg = newMsgs[newMsgs.length - 1];
+          setConversations(prev =>
+            prev.map(conv =>
+              conv.partnerId === partnerId
+                ? { ...conv, lastMessage: latestMsg.content, lastMessageAt: latestMsg.createdAt, unreadCount: 0 }
+                : conv
+            )
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error polling messages:", error);
+    }
+  }, []);
+
+  // 会話切り替え時に全件取得
+  useEffect(() => {
+    if (selectedPartnerId) {
+      lastMessageIdRef.current = null;
+      fetchAllMessages(selectedPartnerId);
+    }
+  }, [selectedPartnerId, fetchAllMessages]);
+
+  // メッセージのポーリング（10秒間隔、会話が選択されている時のみ）
+  useEffect(() => {
+    if (!selectedPartnerId) return;
+
+    const interval = setInterval(() => {
+      fetchNewMessages(selectedPartnerId);
+    }, MESSAGE_POLL_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [selectedPartnerId, fetchNewMessages]);
+
+  // メッセージ変更時に自動スクロール（一番下にいる場合のみ）
+  useEffect(() => {
+    if (isAtBottomRef.current) {
+      scrollToBottom();
+    }
+  }, [messages, scrollToBottom]);
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedPartnerId || isSending) return;
 
+    const messageContent = newMessage.trim();
     setIsSending(true);
     try {
       const res = await fetch("/api/messages", {
@@ -103,7 +186,7 @@ export default function MessagesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           receiverId: selectedPartnerId,
-          content: newMessage.trim(),
+          content: messageContent,
         }),
       });
 
@@ -111,12 +194,14 @@ export default function MessagesPage() {
         const sentMessage = await res.json();
         setMessages(prev => [...prev, sentMessage]);
         setNewMessage("");
+        lastMessageIdRef.current = sentMessage.id;
+        isAtBottomRef.current = true;
 
         // Update conversation list
         setConversations(prev =>
           prev.map(conv =>
             conv.partnerId === selectedPartnerId
-              ? { ...conv, lastMessage: newMessage.trim(), lastMessageAt: new Date().toISOString() }
+              ? { ...conv, lastMessage: messageContent, lastMessageAt: new Date().toISOString() }
               : conv
           )
         );
@@ -279,7 +364,11 @@ export default function MessagesPage() {
               </div>
 
               {/* Messages */}
-              <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+              <ScrollArea
+                className="flex-1 p-4"
+                ref={scrollRef}
+                onScrollCapture={checkIfAtBottom}
+              >
                 {isLoadingMessages ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

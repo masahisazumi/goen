@@ -23,6 +23,9 @@ import {
   Plus,
   Building2,
   Store,
+  Mail,
+  LayoutDashboard,
+  Crown,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -94,7 +97,7 @@ const menuItems = [
   { icon: Link2, label: "アカウント連携", href: "/settings/account" },
   { icon: Bell, label: "通知設定", href: "/settings/notifications" },
   { icon: Shield, label: "本人確認", href: "/settings/verification", badge: "未確認" },
-  { icon: CreditCard, label: "お支払い方法", href: "/settings/payment" },
+  { icon: CreditCard, label: "お支払い・プラン", href: "/settings/payment", ownerOnly: true },
   { icon: HelpCircle, label: "ヘルプ・FAQ", href: "/faq" },
 ];
 
@@ -110,6 +113,24 @@ export default function MyPage() {
   const [myStores, setMyStores] = useState<StoreData[]>([]);
   const [stats, setStats] = useState({ favorites: 0, messages: 0, bookings: 0, reviews: 0, spaces: 0, stores: 0 });
   const [isLoading, setIsLoading] = useState(true);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
+  const [verificationResent, setVerificationResent] = useState(false);
+
+  const needsEmailVerification = session?.user && !session.user.emailVerified;
+
+  const handleResendVerification = async () => {
+    setIsResendingVerification(true);
+    try {
+      const res = await fetch("/api/auth/resend-verification", { method: "POST" });
+      if (res.ok) {
+        setVerificationResent(true);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setIsResendingVerification(false);
+    }
+  };
 
   // ユーザーの役割をチェック
   const userTypes = profile?.userTypes || [];
@@ -212,6 +233,34 @@ export default function MyPage() {
 
       <main className="flex-1 py-8">
         <div className="container mx-auto px-4">
+          {needsEmailVerification && (
+            <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <Mail className="h-5 w-5 text-amber-600 shrink-0" />
+                <p className="text-sm text-amber-800">
+                  メールアドレスが未確認です。確認メール内のリンクをクリックして、アカウントを有効にしてください。
+                </p>
+              </div>
+              {verificationResent ? (
+                <span className="text-sm text-green-600 font-medium">送信しました</span>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full border-amber-300 text-amber-700 hover:bg-amber-100 shrink-0"
+                  onClick={handleResendVerification}
+                  disabled={isResendingVerification}
+                >
+                  {isResendingVerification ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : (
+                    <Mail className="h-4 w-4 mr-1" />
+                  )}
+                  確認メールを再送
+                </Button>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Sidebar */}
             <div className="lg:col-span-1 space-y-6">
@@ -243,6 +292,12 @@ export default function MyPage() {
                       <Badge variant="secondary" className="rounded-full">
                         {getRoleLabel()}
                       </Badge>
+                      {isOwner && session?.user?.subscriptionPlan === "premium" && (
+                        <Badge className="rounded-full bg-amber-500 text-white">
+                          <Crown className="h-3 w-3 mr-1" />
+                          プレミアム
+                        </Badge>
+                      )}
                       {!userProfile.isVerified && (
                         <Badge variant="outline" className="rounded-full text-yellow-600 border-yellow-300">
                           未認証
@@ -351,7 +406,7 @@ export default function MyPage() {
               <Card className="border-0 shadow-sm rounded-2xl bg-white">
                 <CardContent className="p-4">
                   <nav className="space-y-1">
-                    {menuItems.map((item) => (
+                    {menuItems.filter((item) => !item.ownerOnly || isOwner).map((item) => (
                       <Link
                         key={item.label}
                         href={item.href}
@@ -371,6 +426,21 @@ export default function MyPage() {
                         </div>
                       </Link>
                     ))}
+                    {session?.user?.isAdmin && (
+                      <>
+                        <Separator className="my-2" />
+                        <Link
+                          href="/admin"
+                          className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <LayoutDashboard className="h-5 w-5 text-gray-900" />
+                            <span className="text-sm font-medium text-gray-900">管理者ダッシュボード</span>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-gray-400" />
+                        </Link>
+                      </>
+                    )}
                     <Separator className="my-2" />
                     <button
                       onClick={() => signOut({ callbackUrl: "/" })}

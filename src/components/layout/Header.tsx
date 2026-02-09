@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { Menu, User, MessageCircle, Search, ArrowRight } from "lucide-react";
+import { Menu, User, MessageCircle, Search, ArrowRight, Bell, LayoutDashboard } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 
 const navigation = [
   { name: "出店先を探す", href: "/search?type=space" },
@@ -68,6 +69,7 @@ export function Header() {
                   <MessageCircle className="h-5 w-5" />
                 </Link>
               </Button>
+              <NotificationBell />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full">
@@ -95,6 +97,19 @@ export function Header() {
                       メッセージ
                     </Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings/notifications" className="cursor-pointer">
+                      通知設定
+                    </Link>
+                  </DropdownMenuItem>
+                  {session?.user?.isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin" className="cursor-pointer">
+                        <LayoutDashboard className="h-4 w-4 mr-2" />
+                        管理者ダッシュボード
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="cursor-pointer text-gray-500"

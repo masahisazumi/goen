@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { createEmailVerificationToken } from "@/lib/tokens";
+import { sendVerificationEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
   try {
@@ -61,6 +63,14 @@ export async function POST(request: Request) {
         displayName: name,
       },
     });
+
+    // 認証メールを送信（失敗しても登録自体は成功させる）
+    try {
+      const token = await createEmailVerificationToken(email);
+      await sendVerificationEmail(email, token);
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError);
+    }
 
     return NextResponse.json(
       {

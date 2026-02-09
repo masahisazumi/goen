@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notifications";
 
 // GET: 特定の予約を取得
 export async function GET(
@@ -106,6 +107,27 @@ export async function PUT(
       where: { id },
       data: { status },
     });
+
+    // ステータス変更の通知
+    const statusLabels: Record<string, string> = {
+      confirmed: "承認されました",
+      cancelled: "キャンセルされました",
+      completed: "完了しました",
+    };
+    const statusLabel = statusLabels[status];
+    if (statusLabel) {
+      // オーナーが操作した場合は出店者に通知、出店者が操作した場合はオーナーに通知
+      const notifyUserId = isOwner ? booking.vendorId : space?.ownerId;
+      if (notifyUserId) {
+        createNotification({
+          userId: notifyUserId,
+          type: "booking",
+          title: `予約が${statusLabel}`,
+          body: `予約のステータスが更新されました`,
+          link: "/mypage",
+        }).catch((err) => console.error("Notification error:", err));
+      }
+    }
 
     return NextResponse.json(updatedBooking);
   } catch (error) {

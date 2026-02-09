@@ -175,15 +175,65 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (account) {
         token.provider = account.provider;
       }
+
+      // emailVerified, isAdmin, subscriptionPlanをトークンに追加
+      if (user) {
+        // 初回: DBから取得
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id as string },
+          select: { emailVerified: true, isAdmin: true, subscription: true },
+        });
+        token.emailVerified = dbUser?.emailVerified?.toISOString() ?? null;
+        token.isAdmin = dbUser?.isAdmin ?? false;
+        const sub = dbUser?.subscription;
+        token.subscriptionPlan =
+          sub?.status === "active" && sub.stripeCurrentPeriodEnd.getTime() > Date.now()
+            ? "premium"
+            : "free";
+      } else if (!token.emailVerified) {
+        // 未認証時はリクエストごとにDBから再取得（認証完了を即反映）
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { emailVerified: true, isAdmin: true, subscription: true },
+        });
+        token.emailVerified = dbUser?.emailVerified?.toISOString() ?? null;
+        token.isAdmin = dbUser?.isAdmin ?? false;
+        const sub = dbUser?.subscription;
+        token.subscriptionPlan =
+          sub?.status === "active" && sub.stripeCurrentPeriodEnd.getTime() > Date.now()
+            ? "premium"
+            : "free";
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (session.user as any).emailVerified = token.emailVerified ?? null;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (session.user as any).isAdmin = token.isAdmin ?? false;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (session.user as any).subscriptionPlan = token.subscriptionPlan ?? "free";
       }
       return session;
     },
     async signIn({ user, account }) {
+      // OAuth認証時にemailVerifiedを自動設定
+      if (account && account.provider !== "credentials" && user.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { emailVerified: true },
+        });
+        if (!dbUser?.emailVerified) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { emailVerified: new Date() },
+          });
+        }
+      }
+
       // アカウントリンクモードの確認
       const cookieStore = await cookies();
       const linkUserId = cookieStore.get("link_user_id")?.value;
@@ -281,7 +331,20 @@ declare module "next-auth" {
       email?: string | null;
       name?: string | null;
       image?: string | null;
+      emailVerified: string | null;
+      isAdmin: boolean;
+      subscriptionPlan: "free" | "premium";
     };
+  }
+}
+
+declare module "@auth/core/jwt" {
+  interface JWT {
+    id?: string;
+    provider?: string;
+    emailVerified?: string | null;
+    isAdmin?: boolean;
+    subscriptionPlan?: "free" | "premium";
   }
 }
 

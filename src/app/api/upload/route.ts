@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
 import { prisma } from "@/lib/prisma";
+import { uploadFile } from "@/lib/storage";
 
 export async function POST(request: Request) {
   try {
@@ -13,8 +12,8 @@ export async function POST(request: Request) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    const type = formData.get("type") as string | null; // "profile" or "space"
-    const targetId = formData.get("targetId") as string | null; // spaceId if type is "space"
+    const type = formData.get("type") as string | null; // "profile", "space", or "store"
+    const targetId = formData.get("targetId") as string | null;
 
     if (!file) {
       return NextResponse.json({ error: "ファイルが選択されていません" }, { status: 400 });
@@ -41,23 +40,14 @@ export async function POST(request: Request) {
     // Generate unique filename
     const timestamp = Date.now();
     const extension = file.name.split(".").pop();
-    const filename = `${session.user.id}_${timestamp}.${extension}`;
+    const prefix = type === "profile" ? "profiles" : type === "space" ? "spaces" : "stores";
+    const id = type === "profile" ? session.user.id : targetId || session.user.id;
+    const filename = `${prefix}/${id}_${timestamp}.${extension}`;
 
-    // Create upload directory if it doesn't exist
-    const uploadDir = join(process.cwd(), "public", "uploads");
-    try {
-      await mkdir(uploadDir, { recursive: true });
-    } catch {
-      // Directory might already exist
-    }
-
-    // Save file
+    // Upload to R2
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const filepath = join(uploadDir, filename);
-    await writeFile(filepath, buffer);
-
-    const imageUrl = `/uploads/${filename}`;
+    const imageUrl = await uploadFile(buffer, filename, file.type);
 
     // Save to database based on type
     if (type === "profile") {
@@ -90,6 +80,26 @@ export async function POST(request: Request) {
       await prisma.spaceImage.create({
         data: {
           spaceId: targetId,
+          url: imageUrl,
+          order: 0,
+        },
+      });
+    } else if (type === "store" && targetId) {
+      // Verify ownership
+      const store = await prisma.store.findUnique({
+        where: { id: targetId },
+      });
+
+      if (!store || store.ownerId !== session.user.id) {
+        return NextResponse.json(
+          { error: "この店舗に画像を追加する権限がありません" },
+          { status: 403 }
+        );
+      }
+
+      await prisma.storeImage.create({
+        data: {
+          storeId: targetId,
           url: imageUrl,
           order: 0,
         },

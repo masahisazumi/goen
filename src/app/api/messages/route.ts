@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notifications";
 
 // GET: 会話一覧を取得
 export async function GET() {
@@ -106,6 +107,16 @@ export async function POST(request: Request) {
         receiver: { select: { id: true, name: true, image: true } },
       },
     });
+
+    // 通知を作成（非同期、失敗してもメッセージ送信は成功させる）
+    const senderName = session.user.name || "ユーザー";
+    createNotification({
+      userId: receiverId,
+      type: "message",
+      title: `${senderName}さんからメッセージ`,
+      body: content.length > 50 ? content.slice(0, 50) + "..." : content,
+      link: "/messages",
+    }).catch((err) => console.error("Notification error:", err));
 
     return NextResponse.json(message, { status: 201 });
   } catch (error) {

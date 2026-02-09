@@ -41,7 +41,10 @@ export default function ProfileEditPage() {
     instagram: "",
     twitter: "",
   });
-  const [previewImages, setPreviewImages] = useState<string[]>([]);
+  const [profileImage, setProfileImage] = useState<{ id: string; url: string } | null>(null);
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [userTypes, setUserTypes] = useState<string[]>([]);
 
   // プロフィールデータを読み込む
@@ -60,7 +63,7 @@ export default function ProfileEditPage() {
           });
           // 画像を設定
           if (data.images && data.images.length > 0) {
-            setPreviewImages(data.images.map((img: { url: string }) => img.url));
+            setProfileImage({ id: data.images[0].id, url: data.images[0].url });
           }
           // ユーザータイプを設定
           if (data.userTypes) {
@@ -103,6 +106,33 @@ export default function ProfileEditPage() {
     setIsSaving(true);
 
     try {
+      // Upload new image if selected
+      if (newImageFile) {
+        setIsUploading(true);
+        const uploadData = new FormData();
+        uploadData.append("file", newImageFile);
+        uploadData.append("type", "profile");
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: uploadData,
+        });
+
+        if (!uploadRes.ok) {
+          const uploadErr = await uploadRes.json();
+          setError(uploadErr.error || "画像のアップロードに失敗しました");
+          setIsUploading(false);
+          setIsSaving(false);
+          return;
+        }
+
+        const { url } = await uploadRes.json();
+        setProfileImage({ id: "", url });
+        setNewImageFile(null);
+        setPreviewUrl(null);
+        setIsUploading(false);
+      }
+
       const res = await fetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -120,6 +150,7 @@ export default function ProfileEditPage() {
       setError("保存中にエラーが発生しました");
     } finally {
       setIsSaving(false);
+      setIsUploading(false);
     }
   };
 
@@ -243,18 +274,32 @@ export default function ProfileEditPage() {
                   <CardContent>
                     <div className="flex items-center gap-6">
                       <div className="relative">
-                        {previewImages.length > 0 ? (
+                        {previewUrl || profileImage ? (
                           <div className="relative h-24 w-24 rounded-full overflow-hidden bg-gray-100">
                             <Image
-                              src={previewImages[0]}
+                              src={previewUrl || profileImage!.url}
                               alt="プロフィール画像"
                               fill
                               className="object-cover"
+                              unoptimized={!!previewUrl}
                             />
                             <button
                               type="button"
                               className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
-                              onClick={() => setPreviewImages([])}
+                              onClick={async () => {
+                                if (profileImage?.id) {
+                                  try {
+                                    await fetch(`/api/upload/${profileImage.id}?type=profile`, {
+                                      method: "DELETE",
+                                    });
+                                  } catch {
+                                    // ignore
+                                  }
+                                }
+                                setProfileImage(null);
+                                setNewImageFile(null);
+                                setPreviewUrl(null);
+                              }}
                             >
                               <X className="h-6 w-6" />
                             </button>
@@ -264,13 +309,17 @@ export default function ProfileEditPage() {
                             <Plus className="h-6 w-6 text-gray-400" />
                             <input
                               type="file"
-                              accept="image/*"
+                              accept="image/jpeg,image/png,image/webp,image/gif"
                               className="hidden"
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
-                                  const url = URL.createObjectURL(file);
-                                  setPreviewImages([url]);
+                                  if (file.size > 5 * 1024 * 1024) {
+                                    setError("ファイルサイズは5MB以下にしてください");
+                                    return;
+                                  }
+                                  setNewImageFile(file);
+                                  setPreviewUrl(URL.createObjectURL(file));
                                 }
                               }}
                             />
@@ -279,7 +328,7 @@ export default function ProfileEditPage() {
                       </div>
                       <div className="text-sm text-gray-500">
                         <p>推奨: 正方形の画像</p>
-                        <p className="text-xs mt-1">※画像アップロードは準備中です</p>
+                        <p className="text-xs mt-1">JPG, PNG, WebP, GIF（5MB以下）</p>
                       </div>
                     </div>
                   </CardContent>
@@ -400,7 +449,7 @@ export default function ProfileEditPage() {
                     {isSaving ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        保存中...
+                        {isUploading ? "画像アップロード中..." : "保存中..."}
                       </>
                     ) : (
                       <>

@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
 import {
   ArrowLeft,
   ArrowRight,
@@ -12,6 +13,7 @@ import {
   ImagePlus,
   CheckCircle2,
   Trash2,
+  X,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -56,6 +58,11 @@ const tagOptions = [
   "マルシェ向け",
 ];
 
+interface SpaceImage {
+  id: string;
+  url: string;
+}
+
 interface Space {
   id: string;
   name: string;
@@ -69,6 +76,7 @@ interface Space {
   tags?: string;
   facilities?: string;
   isActive: boolean;
+  images?: SpaceImage[];
 }
 
 export default function EditSpacePage({ params }: { params: Promise<{ id: string }> }) {
@@ -93,6 +101,9 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
   });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<SpaceImage[]>([]);
+  const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
+  const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
 
   // スペースデータを取得
   useEffect(() => {
@@ -116,6 +127,11 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
           closedDays: space.closedDays || "",
           isActive: space.isActive,
         });
+
+        // 画像を設定
+        if (space.images) {
+          setExistingImages(space.images);
+        }
 
         // タグと設備をパース
         if (space.tags) {
@@ -192,6 +208,19 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
       if (!response.ok) {
         setError(data.error || "スペースの更新に失敗しました");
         return;
+      }
+
+      // Upload new images
+      if (newImageFiles.length > 0) {
+        for (const file of newImageFiles) {
+          const uploadData = new FormData();
+          uploadData.append("file", file);
+          uploadData.append("type", "space");
+          uploadData.append("targetId", id);
+          await fetch("/api/upload", { method: "POST", body: uploadData });
+        }
+        setNewImageFiles([]);
+        setNewImagePreviews([]);
       }
 
       setIsSuccess(true);
@@ -555,21 +584,87 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                   </CardContent>
                 </Card>
 
-                {/* 画像アップロード（プレースホルダー） */}
+                {/* 画像アップロード */}
                 <Card className="rounded-2xl border-0 shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-lg">スペース画像</CardTitle>
                     <CardDescription>
-                      スペースの写真を追加してください（任意）
+                      スペースの写真を追加してください（任意・最大5枚）
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center">
-                      <ImagePlus className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-                      <p className="text-sm text-gray-600">
-                        画像アップロード機能は準備中です
-                      </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {existingImages.map((img) => (
+                        <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden bg-gray-100">
+                          <Image
+                            src={img.url}
+                            alt="スペース画像"
+                            fill
+                            className="object-cover"
+                          />
+                          <button
+                            type="button"
+                            className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                            onClick={async () => {
+                              try {
+                                await fetch(`/api/upload/${img.id}?type=space`, { method: "DELETE" });
+                                setExistingImages((prev) => prev.filter((i) => i.id !== img.id));
+                              } catch {
+                                setError("画像の削除に失敗しました");
+                              }
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                      {newImagePreviews.map((preview, index) => (
+                        <div key={`new-${index}`} className="relative aspect-square rounded-xl overflow-hidden bg-gray-100">
+                          <Image
+                            src={preview}
+                            alt={`新しい画像 ${index + 1}`}
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                          <button
+                            type="button"
+                            className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                            onClick={() => {
+                              setNewImageFiles((prev) => prev.filter((_, i) => i !== index));
+                              setNewImagePreviews((prev) => prev.filter((_, i) => i !== index));
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                      {existingImages.length + newImagePreviews.length < 5 && (
+                        <label className="aspect-square rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors">
+                          <ImagePlus className="h-8 w-8 text-gray-400 mb-1" />
+                          <span className="text-xs text-gray-500">追加</span>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                if (file.size > 5 * 1024 * 1024) {
+                                  setError("ファイルサイズは5MB以下にしてください");
+                                  return;
+                                }
+                                setNewImageFiles((prev) => [...prev, file]);
+                                setNewImagePreviews((prev) => [...prev, URL.createObjectURL(file)]);
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
                     </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      JPG, PNG, WebP, GIF（各5MB以下）
+                    </p>
                   </CardContent>
                 </Card>
 

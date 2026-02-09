@@ -14,6 +14,8 @@ export async function GET(
     }
 
     const { partnerId } = await params;
+    const { searchParams } = new URL(request.url);
+    const after = searchParams.get("after");
 
     // Get partner info
     const partner = await prisma.user.findUnique({
@@ -25,14 +27,28 @@ export async function GET(
       return NextResponse.json({ error: "ユーザーが見つかりません" }, { status: 404 });
     }
 
+    // Build where clause
+    const whereClause: Record<string, unknown> = {
+      OR: [
+        { senderId: session.user.id, receiverId: partnerId },
+        { senderId: partnerId, receiverId: session.user.id },
+      ],
+    };
+
+    // ポーリング用: 指定IDより後のメッセージのみ取得
+    if (after) {
+      const afterMessage = await prisma.message.findUnique({
+        where: { id: after },
+        select: { createdAt: true },
+      });
+      if (afterMessage) {
+        whereClause.createdAt = { gt: afterMessage.createdAt };
+      }
+    }
+
     // Get messages between the two users
     const messages = await prisma.message.findMany({
-      where: {
-        OR: [
-          { senderId: session.user.id, receiverId: partnerId },
-          { senderId: partnerId, receiverId: session.user.id },
-        ],
-      },
+      where: whereClause,
       include: {
         sender: { select: { id: true, name: true, image: true } },
       },

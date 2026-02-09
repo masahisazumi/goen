@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notifications";
 
 // GET: レビュー一覧を取得
 export async function GET(request: Request) {
@@ -127,6 +128,16 @@ export async function POST(request: Request) {
         author: { select: { id: true, name: true, image: true } },
       },
     });
+
+    // レビュー対象者に通知
+    const authorName = session.user.name || "ユーザー";
+    createNotification({
+      userId: targetId,
+      type: "review",
+      title: "新しいレビューが投稿されました",
+      body: `${authorName}さんから★${rating}のレビューが届きました`,
+      link: "/mypage",
+    }).catch((err) => console.error("Notification error:", err));
 
     return NextResponse.json(review, { status: 201 });
   } catch (error) {

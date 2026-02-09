@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notifications";
 
 // GET: 予約一覧を取得
 export async function GET(request: Request) {
@@ -115,6 +116,16 @@ export async function POST(request: Request) {
         status: "pending",
       },
     });
+
+    // スペースオーナーに通知
+    const dateStr = new Date(date).toLocaleDateString("ja-JP");
+    createNotification({
+      userId: space.ownerId,
+      type: "booking",
+      title: "新しい出店申請",
+      body: `${space.name}への${dateStr}の出店申請がありました`,
+      link: "/mypage",
+    }).catch((err) => console.error("Notification error:", err));
 
     return NextResponse.json(booking, { status: 201 });
   } catch (error) {
