@@ -4,10 +4,26 @@ const globalForStripe = globalThis as unknown as {
   stripe: Stripe | undefined;
 };
 
-export const stripe =
-  globalForStripe.stripe ??
-  new Stripe(process.env.STRIPE_SECRET_KEY!, {
+function createStripeClient() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
     typescript: true,
   });
+}
 
-if (process.env.NODE_ENV !== "production") globalForStripe.stripe = stripe;
+export function getStripe() {
+  if (!globalForStripe.stripe) {
+    globalForStripe.stripe = createStripeClient();
+  }
+  return globalForStripe.stripe;
+}
+
+export const stripe = new Proxy({} as Stripe, {
+  get(_target, prop, receiver) {
+    const client = getStripe();
+    const value = Reflect.get(client, prop, receiver);
+    if (typeof value === "function") {
+      return value.bind(client);
+    }
+    return value;
+  },
+});
