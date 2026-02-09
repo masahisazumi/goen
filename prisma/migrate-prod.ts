@@ -1,0 +1,299 @@
+import { config } from "dotenv";
+config();
+
+import { createClient } from "@libsql/client";
+
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL!,
+  authToken: process.env.TURSO_AUTH_TOKEN!,
+});
+
+// Get the local schema DDL and apply missing parts to production
+async function main() {
+  console.log("Checking production schema...\n");
+
+  // Get existing tables
+  const tables = await client.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_prisma_%'");
+  const existingTables = new Set(tables.rows.map(r => r.name as string));
+  console.log("Existing tables:", [...existingTables].join(", "));
+
+  // Define all tables that should exist
+  const createStatements: string[] = [
+    `CREATE TABLE IF NOT EXISTS "User" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "name" TEXT,
+      "email" TEXT,
+      "emailVerified" DATETIME,
+      "image" TEXT,
+      "password" TEXT,
+      "userType" TEXT,
+      "isAdmin" BOOLEAN NOT NULL DEFAULT false,
+      "notificationSettings" TEXT,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "stripeCustomerId" TEXT
+    )`,
+    `CREATE TABLE IF NOT EXISTS "Account" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "userId" TEXT NOT NULL,
+      "type" TEXT NOT NULL,
+      "provider" TEXT NOT NULL,
+      "providerAccountId" TEXT NOT NULL,
+      "refresh_token" TEXT,
+      "access_token" TEXT,
+      "expires_at" INTEGER,
+      "token_type" TEXT,
+      "scope" TEXT,
+      "id_token" TEXT,
+      "session_state" TEXT,
+      CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )`,
+    `CREATE TABLE IF NOT EXISTS "Session" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "sessionToken" TEXT NOT NULL,
+      "userId" TEXT NOT NULL,
+      "expires" DATETIME NOT NULL,
+      CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )`,
+    `CREATE TABLE IF NOT EXISTS "VerificationToken" (
+      "identifier" TEXT NOT NULL,
+      "token" TEXT NOT NULL,
+      "expires" DATETIME NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS "Profile" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "userId" TEXT NOT NULL,
+      "displayName" TEXT NOT NULL,
+      "description" TEXT,
+      "category" TEXT,
+      "area" TEXT,
+      "tags" TEXT,
+      "website" TEXT,
+      "instagram" TEXT,
+      "twitter" TEXT,
+      "isVerified" BOOLEAN NOT NULL DEFAULT false,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "Profile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )`,
+    `CREATE TABLE IF NOT EXISTS "ProfileImage" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "profileId" TEXT NOT NULL,
+      "url" TEXT NOT NULL,
+      "order" INTEGER NOT NULL DEFAULT 0,
+      CONSTRAINT "ProfileImage_profileId_fkey" FOREIGN KEY ("profileId") REFERENCES "Profile" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )`,
+    `CREATE TABLE IF NOT EXISTS "Store" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "ownerId" TEXT NOT NULL,
+      "name" TEXT NOT NULL,
+      "description" TEXT,
+      "category" TEXT,
+      "area" TEXT,
+      "tags" TEXT,
+      "website" TEXT,
+      "instagram" TEXT,
+      "twitter" TEXT,
+      "isActive" BOOLEAN NOT NULL DEFAULT true,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "Store_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )`,
+    `CREATE TABLE IF NOT EXISTS "StoreImage" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "storeId" TEXT NOT NULL,
+      "url" TEXT NOT NULL,
+      "order" INTEGER NOT NULL DEFAULT 0,
+      CONSTRAINT "StoreImage_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )`,
+    `CREATE TABLE IF NOT EXISTS "Space" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "ownerId" TEXT NOT NULL,
+      "name" TEXT NOT NULL,
+      "description" TEXT,
+      "location" TEXT NOT NULL,
+      "address" TEXT,
+      "capacity" TEXT,
+      "price" TEXT,
+      "tags" TEXT,
+      "facilities" TEXT,
+      "openingHours" TEXT,
+      "closedDays" TEXT,
+      "isActive" BOOLEAN NOT NULL DEFAULT true,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS "SpaceImage" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "spaceId" TEXT NOT NULL,
+      "url" TEXT NOT NULL,
+      "order" INTEGER NOT NULL DEFAULT 0,
+      CONSTRAINT "SpaceImage_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "Space" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )`,
+    `CREATE TABLE IF NOT EXISTS "Message" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "senderId" TEXT NOT NULL,
+      "receiverId" TEXT NOT NULL,
+      "content" TEXT NOT NULL,
+      "isRead" BOOLEAN NOT NULL DEFAULT false,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "Message_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+      CONSTRAINT "Message_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )`,
+    `CREATE TABLE IF NOT EXISTS "Favorite" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "userId" TEXT NOT NULL,
+      "spaceId" TEXT NOT NULL,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "Favorite_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+      CONSTRAINT "Favorite_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "Space" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )`,
+    `CREATE TABLE IF NOT EXISTS "Review" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "rating" INTEGER NOT NULL,
+      "content" TEXT,
+      "authorId" TEXT NOT NULL,
+      "targetId" TEXT NOT NULL,
+      "spaceId" TEXT,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "Review_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+      CONSTRAINT "Review_targetId_fkey" FOREIGN KEY ("targetId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+      CONSTRAINT "Review_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "Space" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+    )`,
+    `CREATE TABLE IF NOT EXISTS "Booking" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "vendorId" TEXT NOT NULL,
+      "spaceId" TEXT NOT NULL,
+      "date" DATETIME NOT NULL,
+      "status" TEXT NOT NULL DEFAULT 'pending',
+      "message" TEXT,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS "VerificationRequest" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "userId" TEXT NOT NULL,
+      "documentType" TEXT NOT NULL,
+      "documentUrl" TEXT,
+      "status" TEXT NOT NULL DEFAULT 'pending',
+      "note" TEXT,
+      "submittedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "reviewedAt" DATETIME,
+      "reviewedBy" TEXT
+    )`,
+    `CREATE TABLE IF NOT EXISTS "Notification" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "userId" TEXT NOT NULL,
+      "type" TEXT NOT NULL,
+      "title" TEXT NOT NULL,
+      "body" TEXT NOT NULL,
+      "link" TEXT,
+      "isRead" BOOLEAN NOT NULL DEFAULT false,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )`,
+    `CREATE TABLE IF NOT EXISTS "FaqItem" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "question" TEXT NOT NULL,
+      "answer" TEXT NOT NULL,
+      "category" TEXT NOT NULL DEFAULT 'general',
+      "order" INTEGER NOT NULL DEFAULT 0,
+      "isPublished" BOOLEAN NOT NULL DEFAULT true,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS "PreRegistration" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "email" TEXT NOT NULL,
+      "userType" TEXT NOT NULL,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS "Subscription" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "userId" TEXT NOT NULL,
+      "stripeSubscriptionId" TEXT NOT NULL,
+      "stripePriceId" TEXT NOT NULL,
+      "stripeCurrentPeriodEnd" DATETIME NOT NULL,
+      "status" TEXT NOT NULL DEFAULT 'active',
+      "cancelAtPeriodEnd" BOOLEAN NOT NULL DEFAULT false,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "Subscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )`,
+  ];
+
+  // Add missing columns to existing tables
+  const alterStatements: string[] = [];
+
+  // Check User table for missing columns
+  if (existingTables.has("User")) {
+    const userCols = await client.execute("PRAGMA table_info('User')");
+    const colNames = new Set(userCols.rows.map(r => r.name as string));
+    if (!colNames.has("notificationSettings")) alterStatements.push('ALTER TABLE "User" ADD COLUMN "notificationSettings" TEXT');
+    if (!colNames.has("stripeCustomerId")) alterStatements.push('ALTER TABLE "User" ADD COLUMN "stripeCustomerId" TEXT');
+  }
+
+  // Execute creates
+  for (const sql of createStatements) {
+    try {
+      await client.execute(sql);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!msg.includes("already exists")) {
+        console.error("Error:", msg);
+      }
+    }
+  }
+
+  // Execute alters
+  for (const sql of alterStatements) {
+    try {
+      await client.execute(sql);
+      console.log("  Applied:", sql.substring(0, 60) + "...");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!msg.includes("duplicate column")) {
+        console.error("Error:", msg);
+      }
+    }
+  }
+
+  // Create unique indexes
+  const indexes = [
+    'CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email")',
+    'CREATE UNIQUE INDEX IF NOT EXISTS "User_stripeCustomerId_key" ON "User"("stripeCustomerId")',
+    'CREATE UNIQUE INDEX IF NOT EXISTS "Session_sessionToken_key" ON "Session"("sessionToken")',
+    'CREATE UNIQUE INDEX IF NOT EXISTS "Account_provider_providerAccountId_key" ON "Account"("provider", "providerAccountId")',
+    'CREATE UNIQUE INDEX IF NOT EXISTS "VerificationToken_token_key" ON "VerificationToken"("token")',
+    'CREATE UNIQUE INDEX IF NOT EXISTS "VerificationToken_identifier_token_key" ON "VerificationToken"("identifier", "token")',
+    'CREATE UNIQUE INDEX IF NOT EXISTS "Profile_userId_key" ON "Profile"("userId")',
+    'CREATE UNIQUE INDEX IF NOT EXISTS "Favorite_userId_spaceId_key" ON "Favorite"("userId", "spaceId")',
+    'CREATE UNIQUE INDEX IF NOT EXISTS "VerificationRequest_userId_key" ON "VerificationRequest"("userId")',
+    'CREATE UNIQUE INDEX IF NOT EXISTS "PreRegistration_email_key" ON "PreRegistration"("email")',
+    'CREATE UNIQUE INDEX IF NOT EXISTS "Subscription_userId_key" ON "Subscription"("userId")',
+    'CREATE UNIQUE INDEX IF NOT EXISTS "Subscription_stripeSubscriptionId_key" ON "Subscription"("stripeSubscriptionId")',
+  ];
+
+  for (const sql of indexes) {
+    try {
+      await client.execute(sql);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!msg.includes("already exists")) {
+        console.error("Index error:", msg);
+      }
+    }
+  }
+
+  console.log("\nSchema migration completed!");
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(() => {
+    client.close();
+  });
