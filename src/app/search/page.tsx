@@ -50,10 +50,15 @@ const areas = [
   "すべて",
   "東京都",
   "神奈川県",
+  "埼玉県",
+  "千葉県",
   "大阪府",
+  "京都府",
+  "兵庫県",
   "愛知県",
   "福岡県",
   "北海道",
+  "その他",
 ];
 
 function SearchContent() {
@@ -72,7 +77,13 @@ function SearchContent() {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
-      if (selectedArea !== "すべて") params.set("area", selectedArea);
+      if (selectedArea === "その他") {
+        // 「その他」= リスト内の主要エリア以外
+        const mainAreas = areas.filter((a) => a !== "すべて" && a !== "その他");
+        params.set("excludeAreas", mainAreas.join(","));
+      } else if (selectedArea !== "すべて") {
+        params.set("area", selectedArea);
+      }
       if (selectedCategory !== "すべて") params.set("category", selectedCategory);
 
       const endpoint = searchType === "vendor" ? "/api/vendors" : "/api/spaces";

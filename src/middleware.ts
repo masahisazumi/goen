@@ -1,9 +1,8 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
-// Coming soon mode - only active in production
-const isComingSoonMode =
-  process.env.COMING_SOON_MODE === "true" && process.env.NODE_ENV === "production";
+// Coming soon mode - disabled for now (検収中)
+const isComingSoonMode = false;
 
 // Base URL for redirects (use AUTH_URL or request origin)
 const getBaseUrl = (requestOrigin: string) => {

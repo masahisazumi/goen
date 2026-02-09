@@ -8,6 +8,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
     const area = searchParams.get("area");
+    const excludeAreas = searchParams.get("excludeAreas");
     const query = searchParams.get("q");
     const limit = parseInt(searchParams.get("limit") || "20");
     const offset = parseInt(searchParams.get("offset") || "0");
@@ -21,6 +22,11 @@ export async function GET(request: Request) {
 
     if (area) {
       storeWhere.area = { contains: area };
+    } else if (excludeAreas) {
+      const excluded = excludeAreas.split(",");
+      storeWhere.AND = excluded.map((a) => ({
+        NOT: { area: { contains: a } },
+      }));
     }
 
     if (query) {

@@ -7,6 +7,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const location = searchParams.get("location") || searchParams.get("area");
+    const excludeAreas = searchParams.get("excludeAreas");
     const category = searchParams.get("category");
     const query = searchParams.get("q");
     const limit = parseInt(searchParams.get("limit") || "20");
@@ -16,6 +17,11 @@ export async function GET(request: Request) {
 
     if (location) {
       where.location = { contains: location };
+    } else if (excludeAreas) {
+      const excluded = excludeAreas.split(",");
+      where.AND = excluded.map((a) => ({
+        NOT: { location: { contains: a } },
+      }));
     }
 
     if (category) {
