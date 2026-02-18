@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { auth, isAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/storage";
 
@@ -85,12 +85,13 @@ export async function POST(request: Request) {
         },
       });
     } else if (type === "store" && targetId) {
-      // Verify ownership
+      // Verify ownership or admin
       const store = await prisma.store.findUnique({
         where: { id: targetId },
       });
 
-      if (!store || store.ownerId !== session.user.id) {
+      const adminUser = await isAdmin(session.user.id);
+      if (!store || (store.ownerId !== session.user.id && !adminUser)) {
         return NextResponse.json(
           { error: "この店舗に画像を追加する権限がありません" },
           { status: 403 }

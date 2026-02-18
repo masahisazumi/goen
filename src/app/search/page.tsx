@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SEARCH_CATEGORIES, AREAS } from "@/lib/constants";
 
 interface SearchResult {
   id: string;
@@ -36,34 +37,12 @@ interface SearchResult {
   description: string;
 }
 
-const categories = [
-  "すべて",
-  "キッチンカー",
-  "ハンドメイド",
-  "アクセサリー",
-  "雑貨",
-  "フード",
-  "アート",
-];
-
-const areas = [
-  "すべて",
-  "東京都",
-  "神奈川県",
-  "埼玉県",
-  "千葉県",
-  "大阪府",
-  "京都府",
-  "兵庫県",
-  "愛知県",
-  "福岡県",
-  "北海道",
-  "その他",
-];
+const categories = SEARCH_CATEGORIES;
+const areas = AREAS;
 
 function SearchContent() {
   const searchParams = useSearchParams();
-  const [searchType, setSearchType] = useState<"vendor" | "space">("space");
+  const [searchType, setSearchType] = useState<"vendor" | "space">("vendor");
   const [selectedCategory, setSelectedCategory] = useState("すべて");
   const [selectedArea, setSelectedArea] = useState("すべて");
   const [sortBy, setSortBy] = useState("recommended");
@@ -170,11 +149,11 @@ function SearchContent() {
               <div className="flex items-center justify-between">
                 <Tabs value={searchType} onValueChange={(v) => setSearchType(v as "vendor" | "space")}>
                   <TabsList className="rounded-full bg-muted">
-                    <TabsTrigger value="space" className="rounded-full">
-                      出店スペース
-                    </TabsTrigger>
                     <TabsTrigger value="vendor" className="rounded-full">
                       出店者
+                    </TabsTrigger>
+                    <TabsTrigger value="space" className="rounded-full">
+                      出店スペース
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>

@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   ChevronRight,
   LayoutDashboard,
+  Store,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,7 @@ interface DashboardStats {
   faqItems: number;
   pendingVerifications: number;
   activeSubscriptions: number;
+  stores: { total: number; assigned: number; unassigned: number };
 }
 
 export default function AdminDashboardPage() {
@@ -32,6 +34,7 @@ export default function AdminDashboardPage() {
     faqItems: 0,
     pendingVerifications: 0,
     activeSubscriptions: 0,
+    stores: { total: 0, assigned: 0, unassigned: 0 },
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -46,11 +49,12 @@ export default function AdminDashboardPage() {
     const fetchStats = async () => {
       setIsLoading(true);
       try {
-        const [preRegRes, faqRes, verificationRes, subscriptionsRes] = await Promise.all([
+        const [preRegRes, faqRes, verificationRes, subscriptionsRes, storesRes] = await Promise.all([
           fetch("/api/admin/pre-registrations").then((r) => r.ok ? r.json() : null),
           fetch("/api/admin/faq").then((r) => r.ok ? r.json() : null),
           fetch("/api/admin/verification").then((r) => r.ok ? r.json() : null),
           fetch("/api/admin/subscriptions").then((r) => r.ok ? r.json() : null),
+          fetch("/api/admin/stores").then((r) => r.ok ? r.json() : null),
         ]);
 
         setStats({
@@ -60,6 +64,7 @@ export default function AdminDashboardPage() {
             ? verificationRes.filter((r: { status: string }) => r.status === "pending").length
             : 0,
           activeSubscriptions: subscriptionsRes?.stats?.active ?? 0,
+          stores: storesRes?.stats ?? { total: 0, assigned: 0, unassigned: 0 },
         });
       } catch {
         setError("データの取得に失敗しました");
@@ -123,6 +128,17 @@ export default function AdminDashboardPage() {
       color: "text-purple-500",
       bgColor: "bg-purple-50",
       highlight: false,
+    },
+    {
+      icon: Store,
+      label: "店舗管理",
+      description: "店舗の作成・オーナー紐付け・管理",
+      href: "/admin/stores",
+      stat: stats.stores.total,
+      statLabel: `件（未紐付: ${stats.stores.unassigned}）`,
+      color: "text-orange-500",
+      bgColor: "bg-orange-50",
+      highlight: stats.stores.unassigned > 0,
     },
   ];
 

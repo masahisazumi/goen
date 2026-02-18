@@ -28,16 +28,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-const categoryOptions = [
-  "キッチンカー",
-  "移動販売",
-  "ハンドメイド",
-  "飲食",
-  "スイーツ・カフェ",
-  "物販",
-  "サービス",
-  "その他",
-];
+import { VENDOR_CATEGORY_LABELS } from "@/lib/constants";
+
+const categoryOptions = VENDOR_CATEGORY_LABELS;
 
 const tagOptions = [
   "週末出店可",

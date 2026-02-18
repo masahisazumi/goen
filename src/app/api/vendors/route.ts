@@ -12,9 +12,14 @@ export async function GET(request: Request) {
     const query = searchParams.get("q");
     const limit = parseInt(searchParams.get("limit") || "20");
     const offset = parseInt(searchParams.get("offset") || "0");
+    const featured = searchParams.get("featured") === "true";
+    const sort = searchParams.get("sort") || "newest";
 
-    // Search stores
-    const storeWhere: Record<string, unknown> = { isActive: true };
+    // Search stores (only show stores with an assigned owner)
+    const storeWhere: Record<string, unknown> = {
+      isActive: true,
+      ownerId: { not: null },
+    };
 
     if (category) {
       storeWhere.category = { contains: category };
@@ -37,6 +42,17 @@ export async function GET(request: Request) {
       ];
     }
 
+    // featured: 画像ありの店舗を優先
+    if (featured) {
+      storeWhere.images = { some: {} };
+    }
+
+    // Sort order
+    let orderBy: Record<string, string> = { createdAt: "desc" };
+    if (sort === "newest") {
+      orderBy = { createdAt: "desc" };
+    }
+
     const [stores, total] = await Promise.all([
       prisma.store.findMany({
         where: storeWhere,
@@ -44,7 +60,7 @@ export async function GET(request: Request) {
           owner: { select: { id: true, name: true, image: true } },
           images: { orderBy: { order: "asc" }, take: 1 },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy,
         take: limit,
         skip: offset,
       }),

@@ -18,9 +18,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 
 const navigation = [
-  { name: "出店先を探す", href: "/search?type=space" },
-  { name: "出店者を探す", href: "/search?type=vendor" },
-  { name: "ご利用ガイド", href: "/guide" },
+  { name: "キッチンカー", href: "/search?type=vendor&category=キッチンカー" },
+  { name: "ハンドメイドショップ", href: "/search?type=vendor&category=ハンドメイドショップ" },
+  { name: "その他", href: "/search?type=vendor&category=その他" },
 ];
 
 export function Header() {
@@ -38,7 +38,7 @@ export function Header() {
           <Logo size={72} />
           <div className="flex flex-col">
             <span className="text-3xl font-bold tracking-wide text-[#d35f2d]">てんむすび</span>
-            <span className="text-xs text-[#8b7355] tracking-wider">出店者 × スペース マッチング</span>
+            <span className="text-xs text-[#8b7355] tracking-wider">出店者ポータルサイト</span>
           </div>
         </Link>
 
@@ -149,7 +149,7 @@ export function Header() {
                 <Logo size={72} />
                 <div className="flex flex-col">
                   <span className="text-3xl font-bold tracking-wide text-[#d35f2d]">てんむすび</span>
-                  <span className="text-xs text-[#8b7355] tracking-wider">出店者 × スペース マッチング</span>
+                  <span className="text-xs text-[#8b7355] tracking-wider">出店者ポータルサイト</span>
                 </div>
               </Link>
 

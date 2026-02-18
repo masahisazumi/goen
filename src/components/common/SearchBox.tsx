@@ -12,33 +12,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { VENDOR_CATEGORY_LABELS, AREAS } from "@/lib/constants";
 
-const areas = [
-  "東京都",
-  "神奈川県",
-  "大阪府",
-  "愛知県",
-  "福岡県",
-  "北海道",
-  "その他",
-];
-
-const categories = [
-  "キッチンカー",
-  "ハンドメイド",
-  "アクセサリー",
-  "雑貨",
-  "フード",
-  "アート",
-  "ファッション",
-];
+const areas = AREAS.filter((a) => a !== "すべて");
+const categories = VENDOR_CATEGORY_LABELS;
 
 interface SearchBoxProps {
   variant?: "hero" | "compact";
   defaultType?: "space" | "vendor";
 }
 
-export function SearchBox({ variant = "hero", defaultType = "space" }: SearchBoxProps) {
+export function SearchBox({ variant = "hero", defaultType = "vendor" }: SearchBoxProps) {
   const router = useRouter();
   const [searchType, setSearchType] = useState(defaultType);
   const [area, setArea] = useState("");
@@ -76,18 +60,18 @@ export function SearchBox({ variant = "hero", defaultType = "space" }: SearchBox
       {/* Search Type Tabs */}
       <div className="flex gap-2 mb-4">
         <Button
-          variant={searchType === "space" ? "default" : "outline"}
-          className="rounded-full"
-          onClick={() => setSearchType("space")}
-        >
-          出店先を探す
-        </Button>
-        <Button
           variant={searchType === "vendor" ? "default" : "outline"}
           className="rounded-full"
           onClick={() => setSearchType("vendor")}
         >
           出店者を探す
+        </Button>
+        <Button
+          variant={searchType === "space" ? "default" : "outline"}
+          className="rounded-full"
+          onClick={() => setSearchType("space")}
+        >
+          出店先を探す
         </Button>
       </div>
 

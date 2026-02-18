@@ -1,0 +1,618 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  Store,
+  Plus,
+  Trash2,
+  Loader2,
+  ArrowLeft,
+  Calendar,
+  Filter,
+  UserPlus,
+  UserMinus,
+  Search,
+  LayoutDashboard,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { VENDOR_CATEGORIES, AREAS } from "@/lib/constants";
+
+interface StoreItem {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  area: string | null;
+  website: string | null;
+  instagram: string | null;
+  twitter: string | null;
+  isActive: boolean;
+  ownerId: string | null;
+  owner: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    image: string | null;
+  } | null;
+  createdAt: string;
+}
+
+interface UserItem {
+  id: string;
+  name: string | null;
+  email: string | null;
+  image: string | null;
+  userType: string | null;
+  createdAt: string;
+}
+
+interface Stats {
+  total: number;
+  assigned: number;
+  unassigned: number;
+}
+
+export default function AdminStoresPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [stores, setStores] = useState<StoreItem[]>([]);
+  const [stats, setStats] = useState<Stats>({ total: 0, assigned: 0, unassigned: 0 });
+  const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
+  const [error, setError] = useState("");
+
+  // Create dialog
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newStore, setNewStore] = useState({
+    name: "",
+    description: "",
+    category: "",
+    area: "",
+    website: "",
+    instagram: "",
+    twitter: "",
+  });
+
+  // Assign dialog
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignStoreId, setAssignStoreId] = useState<string | null>(null);
+  const [assigning, setAssigning] = useState(false);
+  const [userQuery, setUserQuery] = useState("");
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
+
+  // Delete dialog
+  const [deleteStoreId, setDeleteStoreId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  const fetchStores = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/stores");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setStores(data.stores);
+      setStats(data.stats);
+    } catch {
+      setError("店舗データの取得に失敗しました");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchStores();
+    }
+  }, [status, fetchStores]);
+
+  const filteredStores = stores.filter((s) => {
+    if (filter === "assigned") return s.ownerId !== null;
+    if (filter === "unassigned") return s.ownerId === null;
+    return true;
+  });
+
+  // Create store
+  const handleCreate = async () => {
+    if (!newStore.name.trim()) return;
+    setCreating(true);
+    try {
+      const res = await fetch("/api/admin/stores", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newStore),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "作成に失敗しました");
+      }
+      setCreateOpen(false);
+      setNewStore({ name: "", description: "", category: "", area: "", website: "", instagram: "", twitter: "" });
+      fetchStores();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "店舗の作成に失敗しました");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // Search users for assign
+  const searchUsers = async (q: string) => {
+    setUserQuery(q);
+    if (q.length < 1) {
+      setUsers([]);
+      return;
+    }
+    setSearchingUsers(true);
+    try {
+      const res = await fetch(`/api/admin/users?q=${encodeURIComponent(q)}`);
+      if (res.ok) {
+        setUsers(await res.json());
+      }
+    } catch {
+      // ignore
+    } finally {
+      setSearchingUsers(false);
+    }
+  };
+
+  // Assign owner
+  const handleAssign = async (userId: string) => {
+    if (!assignStoreId) return;
+    setAssigning(true);
+    try {
+      const res = await fetch(`/api/admin/stores/${assignStoreId}/assign`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (!res.ok) throw new Error();
+      setAssignOpen(false);
+      setAssignStoreId(null);
+      setUserQuery("");
+      setUsers([]);
+      fetchStores();
+    } catch {
+      setError("オーナーの紐付けに失敗しました");
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  // Unassign owner
+  const handleUnassign = async (storeId: string) => {
+    try {
+      const res = await fetch(`/api/admin/stores/${storeId}/assign`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error();
+      fetchStores();
+    } catch {
+      setError("紐付け解除に失敗しました");
+    }
+  };
+
+  // Delete store
+  const handleDelete = async () => {
+    if (!deleteStoreId) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/stores/${deleteStoreId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error();
+      setDeleteStoreId(null);
+      fetchStores();
+    } catch {
+      setError("店舗の削除に失敗しました");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  if (status === "loading" || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/admin">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-gray-900 flex items-center justify-center">
+                <LayoutDashboard className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">店舗管理</h1>
+                <p className="text-sm text-gray-500">{session?.user?.email}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8 max-w-5xl">
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl">
+            {error}
+            <button className="ml-4 underline" onClick={() => setError("")}>閉じる</button>
+          </div>
+        )}
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <Card className="border-0 shadow-sm rounded-2xl">
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-sm text-gray-500">全店舗</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm rounded-2xl">
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-green-600">{stats.assigned}</p>
+              <p className="text-sm text-gray-500">紐付済</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm rounded-2xl">
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-amber-600">{stats.unassigned}</p>
+              <p className="text-sm text-gray-500">未紐付</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-gray-500" />
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべて</SelectItem>
+                <SelectItem value="assigned">紐付済</SelectItem>
+                <SelectItem value="unassigned">未紐付</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={() => setCreateOpen(true)} className="rounded-full">
+            <Plus className="h-4 w-4 mr-2" />
+            新規店舗作成
+          </Button>
+        </div>
+
+        {/* Table */}
+        <Card className="border-0 shadow-sm rounded-2xl overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>店舗名</TableHead>
+                <TableHead className="hidden md:table-cell">カテゴリ</TableHead>
+                <TableHead className="hidden md:table-cell">エリア</TableHead>
+                <TableHead>オーナー</TableHead>
+                <TableHead className="hidden md:table-cell">作成日</TableHead>
+                <TableHead className="text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredStores.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12 text-gray-500">
+                    <Store className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                    <p>店舗がありません</p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredStores.map((store) => (
+                  <TableRow key={store.id}>
+                    <TableCell className="font-medium">{store.name}</TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {store.category || <span className="text-gray-400">-</span>}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {store.area || <span className="text-gray-400">-</span>}
+                    </TableCell>
+                    <TableCell>
+                      {store.owner ? (
+                        <span className="text-sm">
+                          {store.owner.name || store.owner.email}
+                        </span>
+                      ) : (
+                        <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">
+                          未割当
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {new Date(store.createdAt).toLocaleDateString("ja-JP")}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {store.owner ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="紐付け解除"
+                            onClick={() => handleUnassign(store.id)}
+                          >
+                            <UserMinus className="h-4 w-4 text-gray-500" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="オーナー割当"
+                            onClick={() => {
+                              setAssignStoreId(store.id);
+                              setAssignOpen(true);
+                            }}
+                          >
+                            <UserPlus className="h-4 w-4 text-blue-500" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="削除"
+                          onClick={() => setDeleteStoreId(store.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </Card>
+      </main>
+
+      {/* Create Store Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>新規店舗作成</DialogTitle>
+            <DialogDescription>
+              オーナー未割当の店舗を作成します。後からオーナーを紐付けできます。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="name">店舗名 *</Label>
+              <Input
+                id="name"
+                value={newStore.name}
+                onChange={(e) => setNewStore({ ...newStore, name: e.target.value })}
+                placeholder="店舗名を入力"
+              />
+            </div>
+            <div>
+              <Label htmlFor="description">説明</Label>
+              <Textarea
+                id="description"
+                value={newStore.description}
+                onChange={(e) => setNewStore({ ...newStore, description: e.target.value })}
+                placeholder="店舗の説明"
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>カテゴリ</Label>
+                <Select
+                  value={newStore.category}
+                  onValueChange={(v) => setNewStore({ ...newStore, category: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VENDOR_CATEGORIES.map((c) => (
+                      <SelectItem key={c.label} value={c.label}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>エリア</Label>
+                <Select
+                  value={newStore.area}
+                  onValueChange={(v) => setNewStore({ ...newStore, area: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AREAS.filter((a) => a !== "すべて").map((a) => (
+                      <SelectItem key={a} value={a}>{a}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="website">ウェブサイト</Label>
+              <Input
+                id="website"
+                value={newStore.website}
+                onChange={(e) => setNewStore({ ...newStore, website: e.target.value })}
+                placeholder="https://..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="instagram">Instagram</Label>
+                <Input
+                  id="instagram"
+                  value={newStore.instagram}
+                  onChange={(e) => setNewStore({ ...newStore, instagram: e.target.value })}
+                  placeholder="@username"
+                />
+              </div>
+              <div>
+                <Label htmlFor="twitter">Twitter</Label>
+                <Input
+                  id="twitter"
+                  value={newStore.twitter}
+                  onChange={(e) => setNewStore({ ...newStore, twitter: e.target.value })}
+                  placeholder="@username"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>キャンセル</Button>
+            <Button onClick={handleCreate} disabled={creating || !newStore.name.trim()}>
+              {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              作成
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Owner Dialog */}
+      <Dialog open={assignOpen} onOpenChange={(open) => {
+        setAssignOpen(open);
+        if (!open) {
+          setAssignStoreId(null);
+          setUserQuery("");
+          setUsers([]);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>オーナー割当</DialogTitle>
+            <DialogDescription>
+              ユーザーを検索して店舗のオーナーとして紐付けます。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                value={userQuery}
+                onChange={(e) => searchUsers(e.target.value)}
+                placeholder="名前またはメールで検索"
+                className="pl-10"
+              />
+            </div>
+            {searchingUsers && (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+              </div>
+            )}
+            {users.length > 0 && (
+              <div className="max-h-60 overflow-y-auto border rounded-lg divide-y">
+                {users.map((user) => (
+                  <button
+                    key={user.id}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center justify-between"
+                    onClick={() => handleAssign(user.id)}
+                    disabled={assigning}
+                  >
+                    <div>
+                      <p className="font-medium text-sm">{user.name || "名前なし"}</p>
+                      <p className="text-xs text-gray-500">{user.email}</p>
+                    </div>
+                    <UserPlus className="h-4 w-4 text-blue-500 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
+            {userQuery.length > 0 && !searchingUsers && users.length === 0 && (
+              <p className="text-center text-sm text-gray-500 py-4">
+                ユーザーが見つかりません
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <AlertDialog open={!!deleteStoreId} onOpenChange={(open) => !open && setDeleteStoreId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>店舗を削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              この操作は取り消せません。店舗に関連する画像データも削除されます。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              削除する
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

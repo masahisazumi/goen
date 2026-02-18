@@ -38,7 +38,7 @@ interface StoreData {
     id: string;
     name: string | null;
     image: string | null;
-  };
+  } | null;
 }
 
 export default function StoreDetailPage({
@@ -210,12 +210,14 @@ export default function StoreDetailPage({
 
                 {/* Actions (Mobile) */}
                 <div className="flex gap-3 lg:hidden">
-                  <Button className="flex-1 rounded-full" asChild>
-                    <Link href="/messages">
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      メッセージを送る
-                    </Link>
-                  </Button>
+                  {store.owner && (
+                    <Button className="flex-1 rounded-full" asChild>
+                      <Link href="/messages">
+                        <MessageCircle className="mr-2 h-4 w-4" />
+                        メッセージを送る
+                      </Link>
+                    </Button>
+                  )}
                   <Button variant="outline" size="icon" className="rounded-full" onClick={handleShare}>
                     <Share2 className="h-4 w-4" />
                   </Button>
@@ -301,12 +303,14 @@ export default function StoreDetailPage({
                         </div>
                       </div>
 
-                      <Button className="w-full rounded-full mb-3" asChild>
-                        <Link href="/messages">
-                          <MessageCircle className="mr-2 h-4 w-4" />
-                          メッセージを送る
-                        </Link>
-                      </Button>
+                      {store.owner && (
+                        <Button className="w-full rounded-full mb-3" asChild>
+                          <Link href="/messages">
+                            <MessageCircle className="mr-2 h-4 w-4" />
+                            メッセージを送る
+                          </Link>
+                        </Button>
+                      )}
 
                       <Button
                         variant="outline"
