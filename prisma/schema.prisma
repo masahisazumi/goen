@@ -34,6 +34,9 @@ model User {
   stripeCustomerId  String?  @unique
   subscription      Subscription?
 
+  // Gamification
+  totalPoints   Int       @default(0)
+
   // Relations
   profile       Profile?
   stores        Store[]
@@ -43,6 +46,9 @@ model User {
   reviewsGiven  Review[]  @relation("ReviewsGiven")
   reviewsReceived Review[] @relation("ReviewsReceived")
   notifications Notification[]
+  checkIns          CheckIn[]
+  storeReviews      StoreReview[]
+  pointTransactions PointTransaction[]
 }
 
 model Account {
@@ -124,16 +130,34 @@ model Store {
   area        String?   // 主な出店エリア
   tags        String?   // JSON array stored as string
 
+  // 新セクション
+  ownerIntro      String?  // オーナー・スタッフ紹介
+  recommendedItems String? // おすすめ商品
+  commitment      String?  // こだわりポイント
+  calendarImageUrl String? // 出店カレンダー画像URL
+  availableAreas  String?  // 出店可能な県（JSON配列）
+  newsText        String?  // お知らせテキスト
+  newsImageUrl    String?  // お知らせ画像URL
+  messageToOwners String?  // スペースオーナーへ一言
+  motto           String?  // 出店時に大切にしていること
+
   // ビジネス情報
   website     String?
   instagram   String?
   twitter     String?
+
+  // QRコード用トークン
+  qrToken     String?  @unique
 
   images      StoreImage[]
 
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // Gamification relations
+  checkIns     CheckIn[]
+  storeReviews StoreReview[]
 }
 
 model StoreImage {
@@ -297,4 +321,44 @@ model Subscription {
   cancelAtPeriodEnd      Boolean  @default(false)
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
+}
+
+// ============================================
+// Gamification Models
+// ============================================
+
+model CheckIn {
+  id        String   @id @default(cuid())
+  userId    String
+  storeId   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  @@index([userId, storeId])
+  @@index([storeId])
+}
+
+model StoreReview {
+  id        String   @id @default(cuid())
+  userId    String
+  storeId   String
+  rating    Int
+  content   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  @@unique([userId, storeId])
+  @@index([storeId])
+}
+
+model PointTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  points    Int
+  type      String   // "checkin" | "review"
+  refId     String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
 }

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>電気通信事業 ネットワーク構成図 - GOEN</title>
+<style>
+  @page { size: A4 landscape; margin: 15mm; }
+  body { font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; margin: 20px; color: #333; }
+  h1 { text-align: center; font-size: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+  h2 { font-size: 14px; text-align: center; margin-bottom: 30px; color: #666; }
+  .info { text-align: right; font-size: 12px; margin-bottom: 10px; }
+
+  svg { display: block; margin: 0 auto; }
+
+  .box { fill: #fff; stroke: #333; stroke-width: 1.5; rx: 6; ry: 6; }
+  .box-user { fill: #e8f4fd; stroke: #2196F3; }
+  .box-server { fill: #fff3e0; stroke: #FF9800; }
+  .box-db { fill: #e8f5e9; stroke: #4CAF50; }
+  .box-external { fill: #f3e5f5; stroke: #9C27B0; }
+  .box-cdn { fill: #fce4ec; stroke: #E91E63; }
+
+  .label { font-size: 13px; font-weight: bold; text-anchor: middle; fill: #333; }
+  .sublabel { font-size: 10px; text-anchor: middle; fill: #666; }
+  .arrow-label { font-size: 9px; fill: #555; }
+  .section-label { font-size: 11px; font-weight: bold; fill: #999; text-anchor: middle; }
+
+  .arrow { stroke: #555; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+  .arrow-double { stroke: #555; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); marker-start: url(#arrowhead-rev); }
+  .dashed { stroke-dasharray: 5,3; }
+
+  .note { font-size: 11px; fill: #333; }
+  .note-box { fill: #fffde7; stroke: #FFC107; stroke-width: 1; rx: 4; ry: 4; }
+
+  .footer { font-size: 10px; text-align: center; color: #999; margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<div class="info">
+  <p>届出者:冨永愛理<br>
+  サービス名: てんむすび（スペースオーナーとキッチンカー、ハンドメイドショップのマッチングサービス）<br>
+  作成日: 2026年3月5日</p>
+</div>
+
+<h1>ネットワーク構成図</h1>
+<h2>電気通信事業届出用 - メッセージ（チャット）機能に係るネットワーク構成</h2>
+
+<svg width="960" height="620" viewBox="0 0 960 620">
+  <defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#555"/>
+    </marker>
+    <marker id="arrowhead-rev" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto">
+      <polygon points="8 0, 0 3, 8 6" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- ===== Section: Users (Left) ===== -->
+  <text x="120" y="30" class="section-label">利用者端末</text>
+
+  <!-- Space Owner -->
+  <rect x="30" y="120" width="180" height="70" class="box box-user"/>
+  <text x="120" y="150" class="label">スペースオーナー</text>
+  <text x="120" y="167" class="sublabel">Webブラウザ（PC / スマートフォン）</text>
+
+  <!-- Kitchen Car -->
+  <rect x="30" y="360" width="180" height="70" class="box box-user"/>
+  <text x="120" y="390" class="label">キッチンカー事業者</text>
+  <text x="120" y="407" class="sublabel">Webブラウザ（PC / スマートフォン）</text>
+
+  <!-- ===== Internet ===== -->
+  <rect x="270" y="230" width="120" height="90" class="box" style="fill:#f5f5f5; stroke:#999; rx:45; ry:45;"/>
+  <text x="330" y="270" class="label">インターネット</text>
+  <text x="330" y="287" class="sublabel">（公衆回線）</text>
+
+  <!-- Arrows: Users to Internet -->
+  <line x1="210" y1="155" x2="275" y2="245" class="arrow-double"/>
+  <text x="225" y="188" class="arrow-label" transform="rotate(-25,225,188)">HTTPS (TLS)</text>
+
+  <line x1="210" y1="395" x2="275" y2="305" class="arrow-double"/>
+  <text x="225" y="370" class="arrow-label" transform="rotate(25,225,370)">HTTPS (TLS)</text>
+
+  <!-- ===== Vercel (App Server) ===== -->
+  <text x="560" y="30" class="section-label">アプリケーション基盤（Vercel）</text>
+
+  <rect x="460" y="45" width="200" height="50" class="box box-server"/>
+  <text x="560" y="67" class="label">CDN / Edge Network</text>
+  <text x="560" y="82" class="sublabel">Vercel Edge Network</text>
+
+  <rect x="460" y="120" width="200" height="60" class="box box-server"/>
+  <text x="560" y="147" class="label">Next.js アプリケーション</text>
+  <text x="560" y="162" class="sublabel">API Routes / SSR</text>
+
+  <rect x="460" y="205" width="200" height="50" class="box box-server"/>
+  <text x="560" y="227" class="label">認証基盤 (NextAuth.js)</text>
+  <text x="560" y="242" class="sublabel">JWT / セッション管理</text>
+
+  <rect x="460" y="280" width="200" height="80" class="box box-server" style="stroke:#d35f2d; stroke-width:2.5;"/>
+  <text x="560" y="305" class="label" style="fill:#d35f2d;">メッセージ処理 API</text>
+  <text x="560" y="322" class="sublabel">POST /api/messages（送信）</text>
+  <text x="560" y="336" class="sublabel">GET /api/messages（一覧取得）</text>
+  <text x="560" y="350" class="sublabel">GET /api/messages/[partnerId]（会話取得）</text>
+
+  <rect x="460" y="385" width="200" height="50" class="box box-server"/>
+  <text x="560" y="407" class="label">通知処理</text>
+  <text x="560" y="422" class="sublabel">アプリ内通知 + メール通知</text>
+
+  <!-- Vercel internal arrows -->
+  <line x1="560" y1="95" x2="560" y2="120" class="arrow" style="stroke:#FF9800;"/>
+  <line x1="560" y1="180" x2="560" y2="205" class="arrow-double" style="stroke:#FF9800;"/>
+  <line x1="560" y1="255" x2="560" y2="280" class="arrow-double" style="stroke:#FF9800;"/>
+  <line x1="560" y1="360" x2="560" y2="385" class="arrow" style="stroke:#FF9800;"/>
+
+  <!-- Arrow: Internet to Vercel -->
+  <line x1="390" y1="270" x2="458" y2="320" class="arrow-double"/>
+  <text x="400" y="280" class="arrow-label">HTTPS</text>
+
+  <!-- ===== Database (Right Top) ===== -->
+  <rect x="750" y="120" width="180" height="80" class="box box-db"/>
+  <text x="840" y="150" class="label">Turso (LibSQL)</text>
+  <text x="840" y="167" class="sublabel">AWS ap-northeast-1</text>
+  <text x="840" y="182" class="sublabel">メッセージ / ユーザーデータ保存</text>
+
+  <line x1="660" y1="310" x2="750" y2="180" class="arrow-double"/>
+  <text x="720" y="240" class="arrow-label" transform="rotate(-40,720,240)">libsql (HTTPS)</text>
+
+  <!-- ===== External Services ===== -->
+  <!-- Resend -->
+  <rect x="750" y="280" width="180" height="60" class="box box-external"/>
+  <text x="840" y="305" class="label">Resend</text>
+  <text x="840" y="322" class="sublabel">メール通知配信 (SMTP/API)</text>
+
+  <line x1="660" y1="410" x2="750" y2="310" class="arrow"/>
+  <text x="695" y="370" class="arrow-label" transform="rotate(-35,695,370)">HTTPS (API)</text>
+
+  <!-- Cloudflare R2 -->
+  <rect x="750" y="380" width="180" height="60" class="box box-cdn"/>
+  <text x="840" y="405" class="label">Cloudflare R2</text>
+  <text x="840" y="422" class="sublabel">画像ストレージ (S3互換)</text>
+
+  <line x1="660" y1="155" x2="750" y2="400" class="arrow-double dashed"/>
+  <text x="740" y="300" class="arrow-label" transform="rotate(60,740,300)">HTTPS</text>
+
+  <!-- Auth Providers -->
+  <rect x="750" y="470" width="180" height="60" class="box box-external"/>
+  <text x="840" y="493" class="label">認証プロバイダ</text>
+  <text x="840" y="510" class="sublabel">Google OAuth / LINE Login</text>
+
+  <line x1="660" y1="240" x2="750" y2="490" class="arrow-double dashed"/>
+  <text x="730" y="400" class="arrow-label" transform="rotate(60,730,400)">OAuth 2.0</text>
+
+  <!-- Stripe -->
+  <rect x="750" y="550" width="180" height="50" class="box box-external"/>
+  <text x="840" y="573" class="label">Stripe</text>
+  <text x="840" y="588" class="sublabel">決済・サブスクリプション</text>
+
+  <!-- ===== Legend / Note ===== -->
+  <rect x="20" y="470" width="380" height="140" class="note-box"/>
+  <text x="35" y="492" class="note" style="font-weight:bold;">【構成概要】</text>
+  <text x="35" y="512" class="note">本サービスは、スペースオーナーとキッチンカー事業者間の</text>
+  <text x="35" y="529" class="note">1対1テキストメッセージ機能を提供する。</text>
+  <text x="35" y="549" class="note">- 通信方式: HTTPS（TLS暗号化）によるポーリング方式</text>
+  <text x="35" y="566" class="note">- データ保存: Turso（LibSQL）データベースに暗号化保存</text>
+  <text x="35" y="583" class="note">- 自社設備: なし（全てクラウドサービスを利用）</text>
+  <text x="35" y="600" class="note">- WebSocket等のリアルタイム通信: 未使用</text>
+
+</svg>
+
+<div class="footer">
+  <p>※ 本構成図は電気通信事業届出のために作成されたものです。<br>
+  ※ 全ての通信はHTTPS（TLS）により暗号化されています。自社通信設備の保有はありません。</p>
+</div>
+
+</body>
+</html>

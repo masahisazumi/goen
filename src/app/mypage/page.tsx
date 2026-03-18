@@ -26,6 +26,8 @@ import {
   Mail,
   LayoutDashboard,
   Crown,
+  QrCode,
+  Sparkles,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -92,6 +94,18 @@ interface StoreData {
   images: { url: string }[];
 }
 
+interface CheckInData {
+  id: string;
+  createdAt: string;
+  store: {
+    id: string;
+    name: string;
+    area?: string;
+    category?: string;
+    images: { url: string }[];
+  };
+}
+
 const menuItems = [
   { icon: User, label: "プロフィール編集", href: "/profile/edit" },
   { icon: Link2, label: "アカウント連携", href: "/settings/account" },
@@ -111,7 +125,9 @@ export default function MyPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [mySpaces, setMySpaces] = useState<Space[]>([]);
   const [myStores, setMyStores] = useState<StoreData[]>([]);
-  const [stats, setStats] = useState({ favorites: 0, messages: 0, bookings: 0, reviews: 0, spaces: 0, stores: 0 });
+  const [checkIns, setCheckIns] = useState<CheckInData[]>([]);
+  const [totalPoints, setTotalPoints] = useState(0);
+  const [stats, setStats] = useState({ favorites: 0, messages: 0, bookings: 0, reviews: 0, spaces: 0, stores: 0, checkIns: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [isResendingVerification, setIsResendingVerification] = useState(false);
   const [verificationResent, setVerificationResent] = useState(false);
@@ -143,11 +159,12 @@ export default function MyPage() {
       setIsLoading(true);
 
       try {
-        const [profileRes, favoritesRes, bookingsRes, reviewsRes] = await Promise.all([
+        const [profileRes, favoritesRes, bookingsRes, reviewsRes, checkInsRes] = await Promise.all([
           fetch("/api/profile"),
           fetch("/api/favorites"),
           fetch("/api/bookings"),
           fetch(`/api/reviews?targetId=${session.user.id}`),
+          fetch("/api/checkins"),
         ]);
 
         if (profileRes.ok) {
@@ -201,6 +218,23 @@ export default function MyPage() {
           const reviewsData = await reviewsRes.json();
           setReviews(reviewsData.reviews || []);
           setStats(prev => ({ ...prev, reviews: reviewsData.total || 0 }));
+        }
+
+        if (checkInsRes.ok) {
+          const checkInsData = await checkInsRes.json();
+          setCheckIns(checkInsData.checkIns || []);
+          setStats(prev => ({ ...prev, checkIns: checkInsData.total || 0 }));
+        }
+
+        // ポイント情報を取得（profileのtotalPoints）
+        try {
+          const userRes = await fetch("/api/profile/points");
+          if (userRes.ok) {
+            const userData = await userRes.json();
+            setTotalPoints(userData.totalPoints || 0);
+          }
+        } catch {
+          // silent
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -308,6 +342,12 @@ export default function MyPage() {
                       <MapPin className="h-3.5 w-3.5" />
                       <span>{userProfile.location}</span>
                     </div>
+                    {totalPoints > 0 && (
+                      <div className="flex items-center gap-1.5 mt-2 bg-amber-50 rounded-full px-3 py-1">
+                        <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                        <span className="text-sm font-bold text-amber-700">{totalPoints} pt</span>
+                      </div>
+                    )}
                   </div>
 
                   <Separator className="my-6" />
@@ -372,6 +412,15 @@ export default function MyPage() {
                       <Star className="h-5 w-5 text-primary mb-1" />
                       <span className="text-lg font-bold text-gray-900">{stats.reviews}</span>
                       <span className="text-xs text-gray-500">レビュー</span>
+                    </Link>
+                    <Link
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); setActiveTab("checkins"); }}
+                      className="flex flex-col items-center p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+                    >
+                      <QrCode className="h-5 w-5 text-primary mb-1" />
+                      <span className="text-lg font-bold text-gray-900">{stats.checkIns}</span>
+                      <span className="text-xs text-gray-500">チェックイン</span>
                     </Link>
                   </div>
 
@@ -484,6 +533,10 @@ export default function MyPage() {
                   <TabsTrigger value="reviews" className="rounded-full data-[state=active]:bg-gray-900 data-[state=active]:text-white">
                     <Star className="h-4 w-4 mr-2" />
                     レビュー
+                  </TabsTrigger>
+                  <TabsTrigger value="checkins" className="rounded-full data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+                    <QrCode className="h-4 w-4 mr-2" />
+                    チェックイン
                   </TabsTrigger>
                 </TabsList>
 
@@ -892,6 +945,79 @@ export default function MyPage() {
                               </div>
                             </div>
                           </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Check-ins Tab */}
+                <TabsContent value="checkins" className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-gray-900">チェックイン履歴</h2>
+                    <div className="flex items-center gap-2">
+                      <QrCode className="h-5 w-5 text-primary" />
+                      <span className="text-gray-500">({stats.checkIns}件)</span>
+                    </div>
+                  </div>
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                    </div>
+                  ) : checkIns.length === 0 ? (
+                    <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
+                      <QrCode className="h-12 w-12 mx-auto text-gray-300" />
+                      <p className="mt-4 text-gray-500">チェックイン履歴はまだありません</p>
+                      <p className="mt-2 text-sm text-gray-400">店舗のQRコードをスキャンしてチェックインしましょう!</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {checkIns.map((checkIn) => (
+                        <Card
+                          key={checkIn.id}
+                          className="border-0 shadow-sm rounded-2xl bg-white"
+                        >
+                          <Link href={`/store/${checkIn.store.id}`}>
+                            <CardContent className="p-4">
+                              <div className="flex items-center gap-4">
+                                <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                                  {checkIn.store.images?.[0]?.url ? (
+                                    <Image
+                                      src={checkIn.store.images[0].url}
+                                      alt={checkIn.store.name}
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  ) : (
+                                    <div className="flex items-center justify-center h-full">
+                                      <Store className="h-6 w-6 text-gray-300" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-bold text-gray-900 truncate">
+                                    {checkIn.store.name}
+                                  </h3>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    {checkIn.store.area && (
+                                      <span className="text-xs text-gray-500 flex items-center gap-0.5">
+                                        <MapPin className="h-3 w-3" />
+                                        {checkIn.store.area}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right flex-shrink-0">
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(checkIn.createdAt).toLocaleDateString("ja-JP")}
+                                  </p>
+                                  <p className="text-xs text-gray-400">
+                                    {new Date(checkIn.createdAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}
+                                  </p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Link>
                         </Card>
                       ))}
                     </div>

@@ -56,7 +56,11 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, description, category, area, tags, website, instagram, twitter, isActive } = body;
+    const {
+      name, description, category, area, tags, website, instagram, twitter, isActive,
+      ownerIntro, recommendedItems, commitment, calendarImageUrl, availableAreas,
+      newsText, newsImageUrl, messageToOwners, motto,
+    } = body;
 
     const store = await prisma.store.update({
       where: { id },
@@ -70,6 +74,15 @@ export async function PUT(
         instagram,
         twitter,
         isActive,
+        ownerIntro,
+        recommendedItems,
+        commitment,
+        calendarImageUrl,
+        availableAreas: availableAreas ? JSON.stringify(availableAreas) : undefined,
+        newsText,
+        newsImageUrl,
+        messageToOwners,
+        motto,
       },
     });
 

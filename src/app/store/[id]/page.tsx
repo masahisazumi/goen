@@ -12,6 +12,7 @@ import {
   Store,
   Globe,
   ArrowLeft,
+  Trophy,
 } from "lucide-react";
 import { Instagram, Twitter } from "lucide-react";
 import { Header } from "@/components/layout/Header";
@@ -39,6 +40,15 @@ interface StoreData {
     name: string | null;
     image: string | null;
   } | null;
+  ownerIntro: string | null;
+  recommendedItems: string | null;
+  commitment: string | null;
+  calendarImageUrl: string | null;
+  availableAreas: string | null;
+  newsText: string | null;
+  newsImageUrl: string | null;
+  messageToOwners: string | null;
+  motto: string | null;
 }
 
 export default function StoreDetailPage({
@@ -49,6 +59,7 @@ export default function StoreDetailPage({
   const { id } = use(params);
   const [store, setStore] = useState<StoreData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [rankInfo, setRankInfo] = useState<{ rank: number; area: string } | null>(null);
 
   useEffect(() => {
     const fetchStore = async () => {
@@ -66,6 +77,26 @@ export default function StoreDetailPage({
     };
     fetchStore();
   }, [id]);
+
+  // ランキング情報を取得
+  useEffect(() => {
+    if (!store?.area) return;
+    const fetchRank = async () => {
+      try {
+        const res = await fetch(`/api/rankings?prefecture=${encodeURIComponent(store.area!)}&limit=50`);
+        if (res.ok) {
+          const data = await res.json();
+          const found = data.rankings.find((r: { id: string }) => r.id === id);
+          if (found) {
+            setRankInfo({ rank: found.rank, area: store.area! });
+          }
+        }
+      } catch {
+        // silent
+      }
+    };
+    fetchRank();
+  }, [store?.area, id]);
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -200,6 +231,15 @@ export default function StoreDetailPage({
                     ))}
                   </div>
                   <h1 className="text-2xl md:text-3xl font-bold">{store.name}</h1>
+                  {rankInfo && (
+                    <Link
+                      href="/ranking"
+                      className="inline-flex items-center gap-1.5 mt-2 bg-amber-50 text-amber-700 rounded-full px-3 py-1 text-sm font-medium hover:bg-amber-100 transition-colors"
+                    >
+                      <Trophy className="h-4 w-4" />
+                      #{rankInfo.rank} in {rankInfo.area}
+                    </Link>
+                  )}
                   {store.area && (
                     <div className="mt-3 flex items-center gap-1 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4" />
@@ -277,6 +317,139 @@ export default function StoreDetailPage({
                           </Link>
                         )}
                       </div>
+                    </div>
+                  </>
+                )}
+
+                {/* オーナー・スタッフ紹介 */}
+                {store.ownerIntro && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h2 className="text-lg font-semibold mb-4">オーナー・スタッフ紹介</h2>
+                      <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+                        {store.ownerIntro}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* おすすめ商品 */}
+                {store.recommendedItems && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h2 className="text-lg font-semibold mb-4">おすすめ商品</h2>
+                      <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+                        {store.recommendedItems}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* こだわりポイント */}
+                {store.commitment && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h2 className="text-lg font-semibold mb-4">こだわりポイント</h2>
+                      <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+                        {store.commitment}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* 出店カレンダー */}
+                {store.calendarImageUrl && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h2 className="text-lg font-semibold mb-4">出店カレンダー</h2>
+                      <div className="relative aspect-[16/9] rounded-xl overflow-hidden bg-gray-100">
+                        <Image
+                          src={store.calendarImageUrl}
+                          alt="出店カレンダー"
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* 出店可能な県 */}
+                {store.availableAreas && (() => {
+                  try {
+                    const areas: string[] = JSON.parse(store.availableAreas);
+                    if (areas.length === 0) return null;
+                    return (
+                      <>
+                        <Separator />
+                        <div>
+                          <h2 className="text-lg font-semibold mb-4">出店可能な県</h2>
+                          <div className="flex flex-wrap gap-2">
+                            {areas.map((area: string) => (
+                              <Badge key={area} variant="secondary" className="rounded-full">
+                                {area}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  } catch {
+                    return null;
+                  }
+                })()}
+
+                {/* お知らせ */}
+                {(store.newsText || store.newsImageUrl) && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h2 className="text-lg font-semibold mb-4">お知らせ</h2>
+                      {store.newsText && (
+                        <p className="text-muted-foreground leading-relaxed whitespace-pre-line mb-4">
+                          {store.newsText}
+                        </p>
+                      )}
+                      {store.newsImageUrl && (
+                        <div className="relative aspect-[16/9] rounded-xl overflow-hidden bg-gray-100">
+                          <Image
+                            src={store.newsImageUrl}
+                            alt="お知らせ"
+                            fill
+                            className="object-contain"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* スペースオーナーへ一言 */}
+                {store.messageToOwners && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h2 className="text-lg font-semibold mb-4">スペースオーナーへ一言</h2>
+                      <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+                        {store.messageToOwners}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* 出店時に大切にしていること */}
+                {store.motto && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h2 className="text-lg font-semibold mb-4">出店時に大切にしていること</h2>
+                      <Badge variant="default" className="rounded-full px-4 py-2 text-sm">
+                        {store.motto}
+                      </Badge>
                     </div>
                   </>
                 )}

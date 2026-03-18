@@ -18,6 +18,8 @@ import {
   Instagram,
   Twitter,
   X,
+  QrCode,
+  Download,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -28,6 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { AREAS, MOTTO_OPTIONS } from "@/lib/constants";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -78,6 +81,15 @@ interface StoreData {
   twitter?: string;
   isActive: boolean;
   images?: StoreImageData[];
+  ownerIntro?: string;
+  recommendedItems?: string;
+  commitment?: string;
+  calendarImageUrl?: string;
+  availableAreas?: string;
+  newsText?: string;
+  newsImageUrl?: string;
+  messageToOwners?: string;
+  motto?: string;
 }
 
 export default function EditStorePage({ params }: { params: Promise<{ id: string }> }) {
@@ -98,11 +110,23 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
     instagram: "",
     twitter: "",
     isActive: true,
+    ownerIntro: "",
+    recommendedItems: "",
+    commitment: "",
+    calendarImageUrl: "",
+    newsText: "",
+    newsImageUrl: "",
+    messageToOwners: "",
+    motto: "",
   });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
+  const [customMotto, setCustomMotto] = useState("");
   const [existingImages, setExistingImages] = useState<StoreImageData[]>([]);
   const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
   const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [isLoadingQr, setIsLoadingQr] = useState(false);
 
   // 店舗データを取得
   useEffect(() => {
@@ -124,6 +148,14 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
           instagram: store.instagram || "",
           twitter: store.twitter || "",
           isActive: store.isActive,
+          ownerIntro: store.ownerIntro || "",
+          recommendedItems: store.recommendedItems || "",
+          commitment: store.commitment || "",
+          calendarImageUrl: store.calendarImageUrl || "",
+          newsText: store.newsText || "",
+          newsImageUrl: store.newsImageUrl || "",
+          messageToOwners: store.messageToOwners || "",
+          motto: store.motto || "",
         });
 
         // 画像を設定
@@ -138,6 +170,20 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
           } catch {
             setSelectedTags([]);
           }
+        }
+
+        // 出店可能エリアをパース
+        if (store.availableAreas) {
+          try {
+            setSelectedAreas(JSON.parse(store.availableAreas));
+          } catch {
+            setSelectedAreas([]);
+          }
+        }
+
+        // mottoがカスタム入力かチェック
+        if (store.motto && !MOTTO_OPTIONS.includes(store.motto as typeof MOTTO_OPTIONS[number])) {
+          setCustomMotto(store.motto);
         }
       } catch {
         setError("店舗の読み込みに失敗しました");
@@ -168,6 +214,42 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
     setFormData((prev) => ({ ...prev, category }));
   };
 
+  const toggleArea = (area: string) => {
+    setSelectedAreas((prev) =>
+      prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]
+    );
+  };
+
+  const selectMotto = (motto: string) => {
+    setFormData((prev) => ({ ...prev, motto: prev.motto === motto ? "" : motto }));
+    setCustomMotto("");
+  };
+
+  const handleImageUploadField = async (
+    file: File,
+    fieldName: "calendarImageUrl" | "newsImageUrl"
+  ) => {
+    if (file.size > 5 * 1024 * 1024) {
+      setError("ファイルサイズは5MB以下にしてください");
+      return;
+    }
+    const uploadData = new FormData();
+    uploadData.append("file", file);
+    uploadData.append("type", "store");
+    uploadData.append("targetId", id);
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: uploadData });
+      if (res.ok) {
+        const data = await res.json();
+        setFormData((prev) => ({ ...prev, [fieldName]: data.url }));
+      } else {
+        setError("画像のアップロードに失敗しました");
+      }
+    } catch {
+      setError("画像のアップロードに失敗しました");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -186,6 +268,8 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
         body: JSON.stringify({
           ...formData,
           tags: selectedTags,
+          availableAreas: selectedAreas,
+          motto: formData.motto || customMotto || undefined,
         }),
       });
 
@@ -236,6 +320,29 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const generateQrCode = async () => {
+    setIsLoadingQr(true);
+    try {
+      const res = await fetch(`/api/stores/${id}/qr`);
+      if (res.ok) {
+        const blob = await res.blob();
+        setQrCodeUrl(URL.createObjectURL(blob));
+      }
+    } catch {
+      setError("QRコードの生成に失敗しました");
+    } finally {
+      setIsLoadingQr(false);
+    }
+  };
+
+  const downloadQrCode = () => {
+    if (!qrCodeUrl) return;
+    const a = document.createElement("a");
+    a.href = qrCodeUrl;
+    a.download = `checkin-qr-${id}.png`;
+    a.click();
   };
 
   // 認証チェック
@@ -637,6 +744,288 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
                     <p className="text-xs text-gray-500 mt-2">
                       JPG, PNG, WebP, GIF（各5MB以下）
                     </p>
+                  </CardContent>
+                </Card>
+
+                {/* オーナー・スタッフ紹介 */}
+                <Card className="rounded-2xl border-0 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg">オーナー・スタッフ紹介</CardTitle>
+                    <CardDescription>お店のスタッフやオーナーについて紹介してください</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea
+                      name="ownerIntro"
+                      placeholder="例: 店主の〇〇です。地元の食材にこだわった料理を提供しています。"
+                      value={formData.ownerIntro}
+                      onChange={handleInputChange}
+                      className="rounded-xl min-h-[100px]"
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* おすすめ商品 */}
+                <Card className="rounded-2xl border-0 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg">おすすめ商品</CardTitle>
+                    <CardDescription>お店のおすすめ商品やメニューを紹介してください</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea
+                      name="recommendedItems"
+                      placeholder="例: 特製ローストビーフ丼、季節のフルーツパフェなど"
+                      value={formData.recommendedItems}
+                      onChange={handleInputChange}
+                      className="rounded-xl min-h-[100px]"
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* こだわりポイント */}
+                <Card className="rounded-2xl border-0 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg">こだわりポイント</CardTitle>
+                    <CardDescription>お店のこだわりをアピールしてください</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea
+                      name="commitment"
+                      placeholder="例: 無添加・無農薬の食材を使用しています"
+                      value={formData.commitment}
+                      onChange={handleInputChange}
+                      className="rounded-xl min-h-[100px]"
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* 出店カレンダー */}
+                <Card className="rounded-2xl border-0 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg">出店カレンダー</CardTitle>
+                    <CardDescription>出店スケジュールの画像をアップロードしてください</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {formData.calendarImageUrl ? (
+                      <div className="relative aspect-[16/9] rounded-xl overflow-hidden bg-gray-100 mb-2">
+                        <Image
+                          src={formData.calendarImageUrl}
+                          alt="出店カレンダー"
+                          fill
+                          className="object-contain"
+                        />
+                        <button
+                          type="button"
+                          className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                          onClick={() => setFormData((prev) => ({ ...prev, calendarImageUrl: "" }))}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="block aspect-[16/9] max-w-sm rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors">
+                        <ImagePlus className="h-8 w-8 text-gray-400 mb-1" />
+                        <span className="text-xs text-gray-500">カレンダー画像を追加</span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleImageUploadField(file, "calendarImageUrl");
+                          }}
+                        />
+                      </label>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* 出店可能な県 */}
+                <Card className="rounded-2xl border-0 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-primary" />
+                      出店可能な県
+                    </CardTitle>
+                    <CardDescription>出店可能なエリアをすべて選択してください</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {AREAS.filter((a) => a !== "すべて").map((area) => (
+                        <Badge
+                          key={area}
+                          variant={selectedAreas.includes(area) ? "default" : "outline"}
+                          className={`cursor-pointer rounded-full px-4 py-2 transition-colors ${
+                            selectedAreas.includes(area)
+                              ? "bg-primary hover:bg-primary/90"
+                              : "hover:bg-gray-100"
+                          }`}
+                          onClick={() => toggleArea(area)}
+                        >
+                          {area}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* お知らせ */}
+                <Card className="rounded-2xl border-0 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg">お知らせ</CardTitle>
+                    <CardDescription>最新のお知らせやイベント情報を発信しましょう</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Textarea
+                      name="newsText"
+                      placeholder="例: 今月のイベント出店情報、新メニューのお知らせなど"
+                      value={formData.newsText}
+                      onChange={handleInputChange}
+                      className="rounded-xl min-h-[80px]"
+                    />
+                    {formData.newsImageUrl ? (
+                      <div className="relative aspect-[16/9] max-w-sm rounded-xl overflow-hidden bg-gray-100">
+                        <Image
+                          src={formData.newsImageUrl}
+                          alt="お知らせ画像"
+                          fill
+                          className="object-contain"
+                        />
+                        <button
+                          type="button"
+                          className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                          onClick={() => setFormData((prev) => ({ ...prev, newsImageUrl: "" }))}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="block w-fit rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 px-6 py-4 flex items-center gap-2 cursor-pointer hover:bg-gray-100 transition-colors">
+                        <ImagePlus className="h-5 w-5 text-gray-400" />
+                        <span className="text-xs text-gray-500">お知らせ画像を追加</span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleImageUploadField(file, "newsImageUrl");
+                          }}
+                        />
+                      </label>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* スペースオーナーへ一言 */}
+                <Card className="rounded-2xl border-0 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg">スペースオーナーへ一言</CardTitle>
+                    <CardDescription>スペースオーナーへのメッセージを入力してください</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea
+                      name="messageToOwners"
+                      placeholder="例: お気軽にお声がけください！出店条件のご相談も承ります。"
+                      value={formData.messageToOwners}
+                      onChange={handleInputChange}
+                      className="rounded-xl min-h-[80px]"
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* 出店時に大切にしていること */}
+                <Card className="rounded-2xl border-0 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg">出店時に大切にしていること</CardTitle>
+                    <CardDescription>キャッチコピーを選択、または自分で入力してください</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                      {MOTTO_OPTIONS.map((motto) => (
+                        <Badge
+                          key={motto}
+                          variant={formData.motto === motto ? "default" : "outline"}
+                          className={`cursor-pointer rounded-full px-4 py-2 transition-colors ${
+                            formData.motto === motto
+                              ? "bg-primary hover:bg-primary/90"
+                              : "hover:bg-gray-100"
+                          }`}
+                          onClick={() => selectMotto(motto)}
+                        >
+                          {motto}
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="customMotto">自分で入力</Label>
+                      <Input
+                        id="customMotto"
+                        placeholder="自分のキャッチコピーを入力"
+                        value={customMotto}
+                        onChange={(e) => {
+                          setCustomMotto(e.target.value);
+                          setFormData((prev) => ({ ...prev, motto: "" }));
+                        }}
+                        className="rounded-xl"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* QRコード（チェックイン用） */}
+                <Card className="rounded-2xl border-0 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <QrCode className="h-5 w-5 text-primary" />
+                      チェックイン用QRコード
+                    </CardTitle>
+                    <CardDescription>
+                      来店客がスキャンしてチェックインできるQRコードを生成します
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {qrCodeUrl ? (
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="relative w-48 h-48 bg-white rounded-xl overflow-hidden border">
+                          <Image
+                            src={qrCodeUrl}
+                            alt="チェックインQRコード"
+                            fill
+                            className="object-contain p-2"
+                            unoptimized
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="rounded-full"
+                          onClick={downloadQrCode}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          ダウンロード
+                        </Button>
+                        <p className="text-xs text-gray-500 text-center">
+                          このQRコードを店舗に掲示してください。来店客がスキャンするとチェックインできます。
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="rounded-full"
+                          onClick={generateQrCode}
+                          disabled={isLoadingQr}
+                        >
+                          {isLoadingQr ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <QrCode className="h-4 w-4 mr-2" />
+                          )}
+                          QRコードを生成
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { Menu, User, MessageCircle, Search, ArrowRight, Bell, LayoutDashboard } from "lucide-react";
+import { Menu, User, MessageCircle, Search, ArrowRight, Bell, LayoutDashboard, Trophy } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -21,6 +21,7 @@ const navigation = [
   { name: "キッチンカー", href: "/search?type=vendor&category=キッチンカー" },
   { name: "ハンドメイドショップ", href: "/search?type=vendor&category=ハンドメイドショップ" },
   { name: "その他", href: "/search?type=vendor&category=その他" },
+  { name: "ランキング", href: "/ranking" },
 ];
 
 export function Header() {
