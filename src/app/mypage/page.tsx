@@ -45,6 +45,7 @@ interface Profile {
   area?: string;
   isVerified: boolean;
   userTypes?: string[];
+  images?: { id: string; url: string }[];
 }
 
 interface Favorite {
@@ -249,7 +250,7 @@ export default function MyPage() {
   const userProfile = {
     name: profile?.displayName || session?.user?.name || "名前未設定",
     email: session?.user?.email || "",
-    avatar: session?.user?.image || "",
+    avatar: profile?.images?.[0]?.url || session?.user?.image || "",
     isVerified: profile?.isVerified || false,
     location: profile?.area || "未設定",
     category: profile?.category || "未設定",

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { Menu, User, MessageCircle, Search, ArrowRight, Bell, LayoutDashboard, Trophy } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
@@ -27,9 +27,24 @@ const navigation = [
 export function Header() {
   const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
 
   // セッションの状態からログイン状態を判定
   const isLoggedIn = status === "authenticated" && !!session;
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    fetch("/api/profile")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.images?.[0]?.url) {
+          setProfileImageUrl(data.images[0].url);
+        }
+      })
+      .catch(() => {});
+  }, [isLoggedIn]);
+
+  const avatarSrc = profileImageUrl || session?.user?.image || "";
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-100">
@@ -75,7 +90,7 @@ export function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                     <Avatar className="h-9 w-9">
-                      <AvatarImage src={session?.user?.image || ""} alt="ユーザー" />
+                      <AvatarImage src={avatarSrc} alt="ユーザー" />
                       <AvatarFallback className="bg-gray-100 text-gray-600">
                         {session?.user?.name?.[0] || <User className="h-4 w-4" />}
                       </AvatarFallback>

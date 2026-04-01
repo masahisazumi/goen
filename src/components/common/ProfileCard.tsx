@@ -1,8 +1,11 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Star, Bookmark } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { MapPin, Star, Heart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -31,9 +34,79 @@ export function ProfileCard({
   reviewCount,
   tags,
   description,
-  isFavorite = false,
+  isFavorite: isFavoriteProp,
   onFavoriteClick,
 }: ProfileCardProps) {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const [isFavorite, setIsFavorite] = useState(isFavoriteProp ?? false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // 外部からのprop変更に追従
+  useEffect(() => {
+    if (isFavoriteProp !== undefined) {
+      setIsFavorite(isFavoriteProp);
+    }
+  }, [isFavoriteProp]);
+
+  // お気に入り状態を取得
+  useEffect(() => {
+    if (isFavoriteProp !== undefined || !session?.user) return;
+    const endpoint = type === "vendor" ? "/api/store-favorites" : "/api/favorites";
+    fetch(endpoint)
+      .then((res) => res.ok ? res.json() : [])
+      .then((favorites) => {
+        if (type === "vendor") {
+          setIsFavorite(favorites.some((f: { store: { id: string } }) => f.store.id === id));
+        } else {
+          setIsFavorite(favorites.some((f: { space: { id: string } }) => f.space.id === id));
+        }
+      })
+      .catch(() => {});
+  }, [session, id, type, isFavoriteProp]);
+
+  const handleFavoriteClick = async () => {
+    if (onFavoriteClick) {
+      onFavoriteClick();
+      return;
+    }
+
+    if (!session?.user) {
+      router.push("/login");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (type === "vendor") {
+        if (isFavorite) {
+          await fetch(`/api/store-favorites?storeId=${id}`, { method: "DELETE" });
+        } else {
+          await fetch("/api/store-favorites", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ storeId: id }),
+          });
+        }
+      } else {
+        if (isFavorite) {
+          await fetch(`/api/favorites?spaceId=${id}`, { method: "DELETE" });
+        } else {
+          await fetch("/api/favorites", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ spaceId: id }),
+          });
+        }
+      }
+      setIsFavorite(!isFavorite);
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const href = type === "vendor" ? `/store/${id}` : `/space/${id}`;
 
   return (
@@ -53,11 +126,12 @@ export function ProfileCard({
           size="icon"
           className={cn(
             "absolute right-3 top-3 h-9 w-9 rounded-full bg-white/90 backdrop-blur-sm transition-all hover:bg-white shadow-sm",
-            isFavorite && "text-primary"
+            isFavorite && "text-red-500"
           )}
-          onClick={onFavoriteClick}
+          onClick={handleFavoriteClick}
+          disabled={isLoading}
         >
-          <Bookmark
+          <Heart
             className={cn("h-5 w-5", isFavorite && "fill-current")}
           />
         </Button>

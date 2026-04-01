@@ -110,8 +110,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ url: imageUrl }, { status: 201 });
   } catch (error) {
     console.error("Upload error:", error);
+    const message = error instanceof Error ? error.message : "アップロードに失敗しました";
+    console.error("Upload error detail:", message);
     return NextResponse.json(
-      { error: "アップロードに失敗しました" },
+      { error: "アップロードに失敗しました", detail: message },
       { status: 500 }
     );
   }
