@@ -42,8 +42,9 @@ model User {
   stores        Store[]
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")
-  favorites     Favorite[]
-  reviewsGiven  Review[]  @relation("ReviewsGiven")
+  favorites       Favorite[]
+  storeFavorites  StoreFavorite[]
+  reviewsGiven    Review[]  @relation("ReviewsGiven")
   reviewsReceived Review[] @relation("ReviewsReceived")
   notifications Notification[]
   checkIns          CheckIn[]
@@ -156,8 +157,9 @@ model Store {
   updatedAt   DateTime @updatedAt
 
   // Gamification relations
-  checkIns     CheckIn[]
-  storeReviews StoreReview[]
+  checkIns       CheckIn[]
+  storeReviews   StoreReview[]
+  storeFavorites StoreFavorite[]
 }
 
 model StoreImage {
@@ -223,6 +225,18 @@ model Favorite {
   space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, spaceId])
+}
+
+model StoreFavorite {
+  id        String   @id @default(cuid())
+  userId    String
+  storeId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storeId])
 }
 
 model Review {

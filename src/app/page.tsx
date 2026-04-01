@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -45,6 +46,8 @@ const steps = [
 ];
 
 export default function HomePage() {
+  const { data: session, status } = useSession();
+  const isLoggedIn = status === "authenticated" && !!session;
   const [newVendors, setNewVendors] = useState<VendorResult[]>([]);
   const [featuredVendors, setFeaturedVendors] = useState<VendorResult[]>([]);
 
@@ -115,9 +118,15 @@ export default function HomePage() {
                   className="rounded-full px-8 h-14 text-base"
                   asChild
                 >
-                  <Link href="/register?type=vendor">
-                    出店者として登録
-                  </Link>
+                  {isLoggedIn ? (
+                    <Link href="/mypage">
+                      マイページ
+                    </Link>
+                  ) : (
+                    <Link href="/register?type=vendor">
+                      出店者として登録
+                    </Link>
+                  )}
                 </Button>
               </div>
             </div>

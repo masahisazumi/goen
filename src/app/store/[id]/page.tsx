@@ -3,6 +3,8 @@
 import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import {
   MapPin,
   Share2,
@@ -13,6 +15,7 @@ import {
   Globe,
   ArrowLeft,
   Trophy,
+  Heart,
 } from "lucide-react";
 import { Instagram, Twitter } from "lucide-react";
 import { Header } from "@/components/layout/Header";
@@ -57,9 +60,13 @@ export default function StoreDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { data: session } = useSession();
+  const router = useRouter();
   const [store, setStore] = useState<StoreData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [rankInfo, setRankInfo] = useState<{ rank: number; area: string } | null>(null);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
 
   useEffect(() => {
     const fetchStore = async () => {
@@ -97,6 +104,49 @@ export default function StoreDetailPage({
     };
     fetchRank();
   }, [store?.area, id]);
+
+  // お気に入り状態を確認
+  useEffect(() => {
+    const checkFavorite = async () => {
+      if (!session?.user) return;
+      try {
+        const res = await fetch("/api/store-favorites");
+        if (res.ok) {
+          const favorites = await res.json();
+          setIsFavorite(favorites.some((f: { store: { id: string } }) => f.store.id === id));
+        }
+      } catch (error) {
+        console.error("Error checking favorite:", error);
+      }
+    };
+    checkFavorite();
+  }, [session, id]);
+
+  const handleToggleFavorite = async () => {
+    if (!session?.user) {
+      router.push("/login");
+      return;
+    }
+
+    setIsFavoriteLoading(true);
+    try {
+      if (isFavorite) {
+        await fetch(`/api/store-favorites?storeId=${id}`, { method: "DELETE" });
+        setIsFavorite(false);
+      } else {
+        await fetch("/api/store-favorites", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ storeId: id }),
+        });
+        setIsFavorite(true);
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+    } finally {
+      setIsFavoriteLoading(false);
+    }
+  };
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -258,6 +308,15 @@ export default function StoreDetailPage({
                       </Link>
                     </Button>
                   )}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={handleToggleFavorite}
+                    disabled={isFavoriteLoading}
+                  >
+                    <Heart className={`h-4 w-4 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
+                  </Button>
                   <Button variant="outline" size="icon" className="rounded-full" onClick={handleShare}>
                     <Share2 className="h-4 w-4" />
                   </Button>
@@ -484,6 +543,16 @@ export default function StoreDetailPage({
                           </Link>
                         </Button>
                       )}
+
+                      <Button
+                        variant="outline"
+                        className="w-full rounded-full mb-3"
+                        onClick={handleToggleFavorite}
+                        disabled={isFavoriteLoading}
+                      >
+                        <Heart className={`mr-2 h-4 w-4 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
+                        {isFavorite ? "お気に入り済み" : "お気に入り"}
+                      </Button>
 
                       <Button
                         variant="outline"
