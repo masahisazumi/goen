@@ -20,6 +20,7 @@ import {
   X,
   QrCode,
   Download,
+  ExternalLink,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -80,6 +81,7 @@ interface StoreData {
   instagram?: string;
   twitter?: string;
   isActive: boolean;
+  draftData?: string;
   images?: StoreImageData[];
   ownerIntro?: string;
   recommendedItems?: string;
@@ -125,6 +127,7 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
   const [existingImages, setExistingImages] = useState<StoreImageData[]>([]);
   const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
   const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
+  const [hasDraft, setHasDraft] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [isLoadingQr, setIsLoadingQr] = useState(false);
 
@@ -139,24 +142,32 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
         }
         const store: StoreData = await res.json();
 
+        // 下書きがあれば下書きデータをフォームに適用
+        const draft = store.draftData ? JSON.parse(store.draftData) : null;
+        const d = draft || store; // 下書き優先
+
         setFormData({
-          name: store.name || "",
-          description: store.description || "",
-          category: store.category || "",
-          area: store.area || "",
-          website: store.website || "",
-          instagram: store.instagram || "",
-          twitter: store.twitter || "",
-          isActive: store.isActive,
-          ownerIntro: store.ownerIntro || "",
-          recommendedItems: store.recommendedItems || "",
-          commitment: store.commitment || "",
-          calendarImageUrl: store.calendarImageUrl || "",
-          newsText: store.newsText || "",
-          newsImageUrl: store.newsImageUrl || "",
-          messageToOwners: store.messageToOwners || "",
-          motto: store.motto || "",
+          name: d.name || store.name || "",
+          description: d.description ?? store.description ?? "",
+          category: d.category ?? store.category ?? "",
+          area: d.area ?? store.area ?? "",
+          website: d.website ?? store.website ?? "",
+          instagram: d.instagram ?? store.instagram ?? "",
+          twitter: d.twitter ?? store.twitter ?? "",
+          isActive: store.isActive, // 公開状態は常に本体から
+          ownerIntro: d.ownerIntro ?? store.ownerIntro ?? "",
+          recommendedItems: d.recommendedItems ?? store.recommendedItems ?? "",
+          commitment: d.commitment ?? store.commitment ?? "",
+          calendarImageUrl: d.calendarImageUrl ?? store.calendarImageUrl ?? "",
+          newsText: d.newsText ?? store.newsText ?? "",
+          newsImageUrl: d.newsImageUrl ?? store.newsImageUrl ?? "",
+          messageToOwners: d.messageToOwners ?? store.messageToOwners ?? "",
+          motto: d.motto ?? store.motto ?? "",
         });
+
+        if (draft) {
+          setHasDraft(true);
+        }
 
         // 画像を設定
         if (store.images) {
@@ -164,26 +175,31 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
         }
 
         // タグをパース
-        if (store.tags) {
+        const tagsSource = d.tags ?? store.tags;
+        if (tagsSource) {
           try {
-            setSelectedTags(JSON.parse(store.tags));
+            const parsed = typeof tagsSource === "string" ? JSON.parse(tagsSource) : tagsSource;
+            setSelectedTags(parsed);
           } catch {
             setSelectedTags([]);
           }
         }
 
         // 出店可能エリアをパース
-        if (store.availableAreas) {
+        const areasSource = d.availableAreas ?? store.availableAreas;
+        if (areasSource) {
           try {
-            setSelectedAreas(JSON.parse(store.availableAreas));
+            const parsed = typeof areasSource === "string" ? JSON.parse(areasSource) : areasSource;
+            setSelectedAreas(parsed);
           } catch {
             setSelectedAreas([]);
           }
         }
 
         // mottoがカスタム入力かチェック
-        if (store.motto && !MOTTO_OPTIONS.includes(store.motto as typeof MOTTO_OPTIONS[number])) {
-          setCustomMotto(store.motto);
+        const mottoVal = d.motto ?? store.motto;
+        if (mottoVal && !MOTTO_OPTIONS.includes(mottoVal as typeof MOTTO_OPTIONS[number])) {
+          setCustomMotto(mottoVal);
         }
       } catch {
         setError("店舗の読み込みに失敗しました");
@@ -250,8 +266,9 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const [savingMode, setSavingMode] = useState<"draft" | "publish" | null>(null);
+
+  const saveStore = async (saveMode: "draft" | "publish") => {
     setError("");
 
     if (!formData.name) {
@@ -259,6 +276,7 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
       return;
     }
 
+    setSavingMode(saveMode);
     setIsSaving(true);
 
     try {
@@ -266,6 +284,7 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          saveMode,
           ...formData,
           tags: selectedTags,
           availableAreas: selectedAreas,
@@ -276,7 +295,8 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "店舗の更新に失敗しました");
+        setError(data.error || data.detail || "店舗の更新に失敗しました");
+        console.error("Store update failed:", response.status, data);
         return;
       }
 
@@ -287,6 +307,9 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
           uploadData.append("file", file);
           uploadData.append("type", "store");
           uploadData.append("targetId", id);
+          if (saveMode === "draft") {
+            uploadData.append("isDraft", "true");
+          }
           await fetch("/api/upload", { method: "POST", body: uploadData });
         }
         setNewImageFiles([]);
@@ -294,11 +317,17 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
       }
 
       setIsSuccess(true);
-    } catch {
-      setError("更新中にエラーが発生しました");
+    } catch (err) {
+      console.error("Store save error:", err);
+      setError("更新中にエラーが発生しました: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await saveStore("publish");
   };
 
   const handleDelete = async () => {
@@ -381,13 +410,28 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
                   <CheckCircle2 className="h-8 w-8 text-green-600" />
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                  店舗を更新しました
+                  {savingMode === "draft" ? "下書きを保存しました" : "店舗を公開保存しました"}
                 </h2>
                 <p className="text-gray-600 mb-6">
-                  店舗情報が正常に更新されました。
+                  {savingMode === "draft"
+                    ? "プレビューで確認後、公開保存するとすべてのユーザーに公開されます。"
+                    : "店舗情報が正常に更新されました。"}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <Button
+                    className="rounded-full"
+                    asChild
+                  >
+                    <Link
+                      href={savingMode === "draft" ? `/store/${id}?draft=true` : `/store/${id}`}
+                      target="_blank"
+                    >
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      {savingMode === "draft" ? "下書きをプレビュー" : "公開ページを確認"}
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
                     className="rounded-full"
                     onClick={() => setIsSuccess(false)}
                   >
@@ -414,6 +458,18 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
                     店舗の情報を更新してください
                   </p>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                    asChild
+                  >
+                    <Link href={`/store/${id}?draft=true`} target="_blank">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      下書きプレビュー
+                    </Link>
+                  </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50">
@@ -447,7 +503,24 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+                </div>
               </div>
+
+              {hasDraft && (
+                <div className="p-4 text-sm text-amber-800 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between">
+                  <span>未公開の下書きがあります。現在フォームには下書きの内容が表示されています。</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full text-xs border-amber-300 text-amber-800 hover:bg-amber-100 shrink-0 ml-4"
+                    asChild
+                  >
+                    <Link href={`/store/${id}?draft=true`} target="_blank">
+                      下書きプレビュー
+                    </Link>
+                  </Button>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {error && (
@@ -1037,14 +1110,14 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
                     className="flex-1 rounded-full"
                     disabled={isSaving}
                   >
-                    {isSaving ? (
+                    {isSaving && savingMode === "publish" ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        更新中...
+                        公開保存中...
                       </>
                     ) : (
                       <>
-                        変更を保存する
+                        公開保存する
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </>
                     )}
@@ -1052,6 +1125,23 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
                   <Button
                     type="button"
                     variant="outline"
+                    size="lg"
+                    className="flex-1 rounded-full"
+                    disabled={isSaving}
+                    onClick={() => saveStore("draft")}
+                  >
+                    {isSaving && savingMode === "draft" ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        下書き保存中...
+                      </>
+                    ) : (
+                      "下書き保存"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
                     size="lg"
                     className="rounded-full"
                     onClick={() => router.back()}

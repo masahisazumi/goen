@@ -102,6 +102,7 @@ export async function POST(request: Request) {
         website,
         instagram,
         twitter,
+        isActive: false, // 新規登録時は下書き（非公開）
         ownerIntro,
         recommendedItems,
         commitment,

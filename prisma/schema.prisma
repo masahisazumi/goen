@@ -152,7 +152,8 @@ model Store {
 
   images      StoreImage[]
 
-  isActive    Boolean  @default(true)
+  isActive    Boolean  @default(false)
+  draftData   String?  // 下書きデータ（JSON）
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -163,11 +164,12 @@ model Store {
 }
 
 model StoreImage {
-  id      String @id @default(cuid())
+  id      String  @id @default(cuid())
   storeId String
-  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
   url     String
-  order   Int    @default(0)
+  order   Int     @default(0)
+  isDraft Boolean @default(false)
 }
 
 model Space {

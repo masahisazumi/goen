@@ -14,6 +14,7 @@ export async function POST(request: Request) {
     const file = formData.get("file") as File | null;
     const type = formData.get("type") as string | null; // "profile", "space", or "store"
     const targetId = formData.get("targetId") as string | null;
+    const isDraft = formData.get("isDraft") === "true";
 
     if (!file) {
       return NextResponse.json({ error: "ファイルが選択されていません" }, { status: 400 });
@@ -103,6 +104,7 @@ export async function POST(request: Request) {
           storeId: targetId,
           url: imageUrl,
           order: 0,
+          isDraft,
         },
       });
     }

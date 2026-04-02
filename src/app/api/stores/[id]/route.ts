@@ -9,16 +9,40 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const isDraftPreview = searchParams.get("draft") === "true";
+
+    const session = await auth();
+    const userId = session?.user?.id;
+
+    // 下書きプレビュー時は全画像、通常は公開画像のみ
     const store = await prisma.store.findUnique({
       where: { id },
       include: {
         owner: { select: { id: true, name: true, image: true } },
-        images: { orderBy: { order: "asc" } },
+        images: {
+          where: isDraftPreview ? {} : { isDraft: false },
+          orderBy: { order: "asc" },
+        },
       },
     });
 
     if (!store) {
       return NextResponse.json({ error: "店舗が見つかりません" }, { status: 404 });
+    }
+
+    const isOwner = userId === store.ownerId;
+    const adminUser = userId ? await isAdmin(userId) : false;
+
+    // 非公開の店舗はオーナーと管理者のみ閲覧可能
+    if (!store.isActive && !isOwner && !adminUser) {
+      return NextResponse.json({ error: "店舗が見つかりません" }, { status: 404 });
+    }
+
+    // 下書きプレビュー: オーナーのみ、draftDataがあればマージして返す
+    if (isDraftPreview && (isOwner || adminUser) && store.draftData) {
+      const draft = JSON.parse(store.draftData);
+      return NextResponse.json({ ...store, ...draft, _isDraft: true });
     }
 
     return NextResponse.json(store);
@@ -28,7 +52,7 @@ export async function GET(
   }
 }
 
-// PUT: 店舗を更新
+// PUT: 店舗を更新（下書き保存 or 公開保存）
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -41,7 +65,6 @@ export async function PUT(
 
     const { id } = await params;
 
-    // Check ownership
     const existingStore = await prisma.store.findUnique({
       where: { id },
     });
@@ -56,12 +79,39 @@ export async function PUT(
     }
 
     const body = await request.json();
+    const { saveMode, ...fields } = body;
     const {
       name, description, category, area, tags, website, instagram, twitter, isActive,
       ownerIntro, recommendedItems, commitment, calendarImageUrl, availableAreas,
       newsText, newsImageUrl, messageToOwners, motto,
-    } = body;
+    } = fields;
 
+    // 下書き保存: draftDataにJSONとして保存、公開データは変更しない
+    if (saveMode === "draft") {
+      const draftData: Record<string, unknown> = {
+        name, description, category, area,
+        tags: tags ? JSON.stringify(tags) : existingStore.tags,
+        website, instagram, twitter,
+        ownerIntro, recommendedItems, commitment, calendarImageUrl,
+        availableAreas: availableAreas ? JSON.stringify(availableAreas) : existingStore.availableAreas,
+        newsText, newsImageUrl, messageToOwners, motto,
+      };
+
+      const store = await prisma.store.update({
+        where: { id },
+        data: { draftData: JSON.stringify(draftData) },
+      });
+
+      return NextResponse.json(store);
+    }
+
+    // 公開保存: 下書き画像を公開に昇格
+    await prisma.storeImage.updateMany({
+      where: { storeId: id, isDraft: true },
+      data: { isDraft: false },
+    });
+
+    // 公開保存: 本体を更新し、下書きをクリア
     const store = await prisma.store.update({
       where: { id },
       data: {
@@ -83,6 +133,7 @@ export async function PUT(
         newsImageUrl,
         messageToOwners,
         motto,
+        draftData: null, // 下書きをクリア
       },
     });
 
@@ -95,7 +146,7 @@ export async function PUT(
 
 // DELETE: 店舗を削除
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -106,7 +157,6 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Check ownership
     const existingStore = await prisma.store.findUnique({
       where: { id },
     });

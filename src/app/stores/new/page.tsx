@@ -17,6 +17,7 @@ import {
   Instagram,
   Twitter,
   ShieldAlert,
+  ExternalLink,
   X,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
@@ -47,6 +48,7 @@ export default function NewStorePage() {
   const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [createdStoreId, setCreatedStoreId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     name: "",
@@ -194,6 +196,7 @@ export default function NewStorePage() {
         });
       }
 
+      setCreatedStoreId(data.id);
       setIsSuccess(true);
     } catch {
       setError("登録中にエラーが発生しました");
@@ -275,40 +278,21 @@ export default function NewStorePage() {
                   店舗を登録しました
                 </h2>
                 <p className="text-gray-600 mb-6">
-                  店舗情報が正常に登録されました。
-                  マイページから確認・編集ができます。
+                  店舗情報が下書きとして登録されました。
+                  プレビューで確認後、編集画面から公開できます。
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Button
-                    className="rounded-full"
-                    onClick={() => {
-                      setIsSuccess(false);
-                      setFormData({
-                        name: "",
-                        description: "",
-                        category: "",
-                        area: "",
-                        website: "",
-                        instagram: "",
-                        twitter: "",
-                        ownerIntro: "",
-                        recommendedItems: "",
-                        commitment: "",
-                        calendarImageUrl: "",
-                        newsText: "",
-                        newsImageUrl: "",
-                        messageToOwners: "",
-                        motto: "",
-                      });
-                      setSelectedTags([]);
-                      setSelectedAreas([]);
-                      setCustomMotto("");
-                      setImageFiles([]);
-                      setImagePreviews([]);
-                    }}
-                  >
-                    続けて登録する
-                  </Button>
+                  {createdStoreId && (
+                    <Button
+                      className="rounded-full"
+                      asChild
+                    >
+                      <Link href={`/store/${createdStoreId}`} target="_blank">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        ページをプレビュー
+                      </Link>
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     className="rounded-full"

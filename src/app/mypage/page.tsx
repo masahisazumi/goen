@@ -28,6 +28,7 @@ import {
   Crown,
   QrCode,
   Sparkles,
+  ExternalLink,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -717,7 +718,18 @@ export default function MyPage() {
                                     <span>{store.area}</span>
                                   </div>
                                 )}
-                                <div className="flex items-center justify-end mt-3">
+                                <div className="flex items-center justify-end gap-2 mt-3">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="rounded-full text-xs h-7"
+                                    asChild
+                                  >
+                                    <Link href={`/store/${store.id}`} target="_blank">
+                                      <ExternalLink className="h-3 w-3 mr-1" />
+                                      プレビュー
+                                    </Link>
+                                  </Button>
                                   <Button
                                     variant="outline"
                                     size="sm"

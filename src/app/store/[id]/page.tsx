@@ -1,10 +1,10 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   MapPin,
   Share2,
@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   Trophy,
   Heart,
+  Eye,
 } from "lucide-react";
 import { Instagram, Twitter } from "lucide-react";
 import { Header } from "@/components/layout/Header";
@@ -59,10 +60,29 @@ export default function StoreDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <StoreDetailContent params={params} />
+    </Suspense>
+  );
+}
+
+function StoreDetailContent({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const { data: session } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isDraftPreview = searchParams.get("draft") === "true";
   const [store, setStore] = useState<StoreData | null>(null);
+  const [isDraft, setIsDraft] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [rankInfo, setRankInfo] = useState<{ rank: number; area: string } | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -71,10 +91,14 @@ export default function StoreDetailPage({
   useEffect(() => {
     const fetchStore = async () => {
       try {
-        const res = await fetch(`/api/stores/${id}`);
+        const url = isDraftPreview
+          ? `/api/stores/${id}?draft=true`
+          : `/api/stores/${id}`;
+        const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
           setStore(data);
+          setIsDraft(!!data._isDraft);
         }
       } catch (error) {
         console.error("Error fetching store:", error);
@@ -83,7 +107,7 @@ export default function StoreDetailPage({
       }
     };
     fetchStore();
-  }, [id]);
+  }, [id, isDraftPreview]);
 
   // ランキング情報を取得
   useEffect(() => {
@@ -203,6 +227,30 @@ export default function StoreDetailPage({
       <Header />
 
       <main className="flex-1">
+        {/* Preview Banner */}
+        {(isDraft || !store.isActive) && (
+          <div className="bg-amber-50 border-b border-amber-200">
+            <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-amber-800 text-sm font-medium">
+                <Eye className="h-4 w-4" />
+                {isDraft
+                  ? "下書きプレビュー表示中（この内容はまだ公開されていません）"
+                  : "プレビュー表示中（このページは非公開です）"}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-full text-xs h-7 border-amber-300 text-amber-800 hover:bg-amber-100"
+                asChild
+              >
+                <Link href={`/stores/${id}/edit`}>
+                  編集に戻る
+                </Link>
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Breadcrumb */}
         <div className="bg-cream py-3">
           <div className="container mx-auto px-4">
