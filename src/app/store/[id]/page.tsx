@@ -89,6 +89,18 @@ function StoreDetailContent({
   const [rankInfo, setRankInfo] = useState<{ rank: number; area: string } | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const galleryImages = store?.images?.length
+    ? store.images.map((img: { url: string }) => img.url)
+    : [];
+
+  const goToPrev = useCallback(() => {
+    setCurrentImageIndex((prev) => (prev === 0 ? galleryImages.length - 1 : prev - 1));
+  }, [galleryImages.length]);
+  const goToNext = useCallback(() => {
+    setCurrentImageIndex((prev) => (prev === galleryImages.length - 1 ? 0 : prev + 1));
+  }, [galleryImages.length]);
 
   useEffect(() => {
     const fetchStore = async () => {
@@ -220,17 +232,6 @@ function StoreDetailContent({
   }
 
   const tags = store.tags ? JSON.parse(store.tags) : [];
-  const galleryImages = store.images.length > 0
-    ? store.images.map(img => img.url)
-    : [];
-
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const goToPrev = useCallback(() => {
-    setCurrentImageIndex((prev) => (prev === 0 ? galleryImages.length - 1 : prev - 1));
-  }, [galleryImages.length]);
-  const goToNext = useCallback(() => {
-    setCurrentImageIndex((prev) => (prev === galleryImages.length - 1 ? 0 : prev + 1));
-  }, [galleryImages.length]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
