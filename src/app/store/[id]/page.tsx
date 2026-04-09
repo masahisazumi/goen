@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect, Suspense } from "react";
+import { use, useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
@@ -17,6 +17,8 @@ import {
   Trophy,
   Heart,
   Eye,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Instagram, Twitter } from "lucide-react";
 import { Header } from "@/components/layout/Header";
@@ -222,6 +224,14 @@ function StoreDetailContent({
     ? store.images.map(img => img.url)
     : [];
 
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const goToPrev = useCallback(() => {
+    setCurrentImageIndex((prev) => (prev === 0 ? galleryImages.length - 1 : prev - 1));
+  }, [galleryImages.length]);
+  const goToNext = useCallback(() => {
+    setCurrentImageIndex((prev) => (prev === galleryImages.length - 1 ? 0 : prev + 1));
+  }, [galleryImages.length]);
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
@@ -272,30 +282,76 @@ function StoreDetailContent({
         <section className="py-6">
           <div className="container mx-auto px-4">
             {galleryImages.length > 0 ? (
-              <div className="grid grid-cols-4 gap-2 md:gap-4 rounded-2xl overflow-hidden">
-                <div className="col-span-4 md:col-span-2 md:row-span-2 relative aspect-[4/3] md:aspect-square">
-                  <Image
-                    src={galleryImages[0]}
-                    alt={store.name}
-                    fill
-                    className="object-cover"
-                    priority
-                  />
-                </div>
-                {galleryImages.slice(1, 5).map((image, index) => (
-                  <div
-                    key={index}
-                    className="hidden md:block relative aspect-square"
-                  >
+              <>
+                {/* Mobile: Carousel */}
+                <div className="md:hidden relative rounded-2xl overflow-hidden">
+                  <div className="relative aspect-[4/3]">
                     <Image
-                      src={image}
-                      alt={`${store.name} ${index + 2}`}
+                      src={galleryImages[currentImageIndex]}
+                      alt={`${store.name} ${currentImageIndex + 1}`}
                       fill
                       className="object-cover"
+                      priority
                     />
                   </div>
-                ))}
-              </div>
+                  {galleryImages.length > 1 && (
+                    <>
+                      <button
+                        onClick={goToPrev}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-1.5"
+                        aria-label="前の画像"
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={goToNext}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-1.5"
+                        aria-label="次の画像"
+                      >
+                        <ChevronRight className="h-5 w-5" />
+                      </button>
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                        {galleryImages.map((_, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setCurrentImageIndex(i)}
+                            className={`w-2 h-2 rounded-full transition-colors ${
+                              i === currentImageIndex ? "bg-white" : "bg-white/50"
+                            }`}
+                            aria-label={`画像 ${i + 1}`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Desktop: Grid */}
+                <div className="hidden md:grid grid-cols-4 gap-4 rounded-2xl overflow-hidden">
+                  <div className="col-span-2 row-span-2 relative aspect-square">
+                    <Image
+                      src={galleryImages[0]}
+                      alt={store.name}
+                      fill
+                      className="object-cover"
+                      priority
+                    />
+                  </div>
+                  {galleryImages.slice(1, 5).map((image, index) => (
+                    <div
+                      key={index}
+                      className="relative aspect-square"
+                    >
+                      <Image
+                        src={image}
+                        alt={`${store.name} ${index + 2}`}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
               <div className="bg-gray-100 rounded-2xl aspect-[2/1] flex items-center justify-center">
                 <Store className="h-16 w-16 text-gray-300" />
