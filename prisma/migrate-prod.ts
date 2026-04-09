@@ -85,25 +85,37 @@ async function main() {
     )`,
     `CREATE TABLE IF NOT EXISTS "Store" (
       "id" TEXT NOT NULL PRIMARY KEY,
-      "ownerId" TEXT NOT NULL,
+      "ownerId" TEXT,
       "name" TEXT NOT NULL,
       "description" TEXT,
       "category" TEXT,
       "area" TEXT,
       "tags" TEXT,
+      "ownerIntro" TEXT,
+      "recommendedItems" TEXT,
+      "commitment" TEXT,
+      "calendarImageUrl" TEXT,
+      "availableAreas" TEXT,
+      "newsText" TEXT,
+      "newsImageUrl" TEXT,
+      "messageToOwners" TEXT,
+      "motto" TEXT,
       "website" TEXT,
       "instagram" TEXT,
       "twitter" TEXT,
-      "isActive" BOOLEAN NOT NULL DEFAULT true,
+      "qrToken" TEXT,
+      "isActive" BOOLEAN NOT NULL DEFAULT false,
+      "draftData" TEXT,
       "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "Store_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      CONSTRAINT "Store_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
     )`,
     `CREATE TABLE IF NOT EXISTS "StoreImage" (
       "id" TEXT NOT NULL PRIMARY KEY,
       "storeId" TEXT NOT NULL,
       "url" TEXT NOT NULL,
       "order" INTEGER NOT NULL DEFAULT 0,
+      "isDraft" BOOLEAN NOT NULL DEFAULT false,
       CONSTRAINT "StoreImage_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store" ("id") ON DELETE CASCADE ON UPDATE CASCADE
     )`,
     `CREATE TABLE IF NOT EXISTS "Space" (
@@ -234,6 +246,30 @@ async function main() {
     if (!colNames.has("stripeCustomerId")) alterStatements.push('ALTER TABLE "User" ADD COLUMN "stripeCustomerId" TEXT');
   }
 
+  // Check Store table for missing columns
+  if (existingTables.has("Store")) {
+    const storeCols = await client.execute("PRAGMA table_info('Store')");
+    const colNames = new Set(storeCols.rows.map(r => r.name as string));
+    if (!colNames.has("ownerIntro")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "ownerIntro" TEXT');
+    if (!colNames.has("recommendedItems")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "recommendedItems" TEXT');
+    if (!colNames.has("commitment")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "commitment" TEXT');
+    if (!colNames.has("calendarImageUrl")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "calendarImageUrl" TEXT');
+    if (!colNames.has("availableAreas")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "availableAreas" TEXT');
+    if (!colNames.has("newsText")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "newsText" TEXT');
+    if (!colNames.has("newsImageUrl")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "newsImageUrl" TEXT');
+    if (!colNames.has("messageToOwners")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "messageToOwners" TEXT');
+    if (!colNames.has("motto")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "motto" TEXT');
+    if (!colNames.has("qrToken")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "qrToken" TEXT');
+    if (!colNames.has("draftData")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "draftData" TEXT');
+  }
+
+  // Check StoreImage table for missing columns
+  if (existingTables.has("StoreImage")) {
+    const storeImageCols = await client.execute("PRAGMA table_info('StoreImage')");
+    const colNames = new Set(storeImageCols.rows.map(r => r.name as string));
+    if (!colNames.has("isDraft")) alterStatements.push('ALTER TABLE "StoreImage" ADD COLUMN "isDraft" BOOLEAN NOT NULL DEFAULT false');
+  }
+
   // Execute creates
   for (const sql of createStatements) {
     try {
@@ -273,6 +309,7 @@ async function main() {
     'CREATE UNIQUE INDEX IF NOT EXISTS "PreRegistration_email_key" ON "PreRegistration"("email")',
     'CREATE UNIQUE INDEX IF NOT EXISTS "Subscription_userId_key" ON "Subscription"("userId")',
     'CREATE UNIQUE INDEX IF NOT EXISTS "Subscription_stripeSubscriptionId_key" ON "Subscription"("stripeSubscriptionId")',
+    'CREATE UNIQUE INDEX IF NOT EXISTS "Store_qrToken_key" ON "Store"("qrToken")',
   ];
 
   for (const sql of indexes) {
