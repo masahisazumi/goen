@@ -85,11 +85,18 @@ export async function POST(request: Request) {
       name, description, category, area, tags, website, instagram, twitter,
       ownerIntro, recommendedItems, commitment, calendarImageUrl, availableAreas,
       newsText, newsImageUrl, messageToOwners, motto,
+      vehicleLength, vehicleWidth, vehicleHeight,
     } = body;
 
     if (!name) {
       return NextResponse.json({ error: "店舗名は必須です" }, { status: 400 });
     }
+
+    const toInt = (v: unknown): number | null => {
+      if (v === null || v === undefined || v === "") return null;
+      const n = typeof v === "number" ? v : parseInt(String(v), 10);
+      return Number.isFinite(n) && n >= 0 ? n : null;
+    };
 
     const store = await prisma.store.create({
       data: {
@@ -112,6 +119,9 @@ export async function POST(request: Request) {
         newsImageUrl,
         messageToOwners,
         motto,
+        vehicleLength: toInt(vehicleLength),
+        vehicleWidth: toInt(vehicleWidth),
+        vehicleHeight: toInt(vehicleHeight),
       },
     });
 

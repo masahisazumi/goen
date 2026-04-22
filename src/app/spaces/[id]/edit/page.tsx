@@ -372,7 +372,7 @@ export default function EditSpacePage({ params }: { params: Promise<{ id: string
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-gray-900">スペースを公開する</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-600">
                           オフにすると検索結果に表示されなくなります
                         </p>
                       </div>

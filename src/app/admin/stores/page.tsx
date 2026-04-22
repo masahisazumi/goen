@@ -282,7 +282,7 @@ export default function AdminStoresPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">店舗管理</h1>
-                <p className="text-sm text-gray-500">{session?.user?.email}</p>
+                <p className="text-sm text-gray-600">{session?.user?.email}</p>
               </div>
             </div>
           </div>
@@ -302,19 +302,19 @@ export default function AdminStoresPage() {
           <Card className="border-0 shadow-sm rounded-2xl">
             <CardContent className="p-4 text-center">
               <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              <p className="text-sm text-gray-500">全店舗</p>
+              <p className="text-sm text-gray-600">全店舗</p>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm rounded-2xl">
             <CardContent className="p-4 text-center">
               <p className="text-2xl font-bold text-green-600">{stats.assigned}</p>
-              <p className="text-sm text-gray-500">紐付済</p>
+              <p className="text-sm text-gray-600">紐付済</p>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm rounded-2xl">
             <CardContent className="p-4 text-center">
               <p className="text-2xl font-bold text-amber-600">{stats.unassigned}</p>
-              <p className="text-sm text-gray-500">未紐付</p>
+              <p className="text-sm text-gray-600">未紐付</p>
             </CardContent>
           </Card>
         </div>
@@ -382,7 +382,7 @@ export default function AdminStoresPage() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm text-gray-500">
+                    <TableCell className="hidden md:table-cell text-sm text-gray-600">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3.5 w-3.5" />
                         {new Date(store.createdAt).toLocaleDateString("ja-JP")}
@@ -583,7 +583,7 @@ export default function AdminStoresPage() {
               </div>
             )}
             {userQuery.length > 0 && !searchingUsers && users.length === 0 && (
-              <p className="text-center text-sm text-gray-500 py-4">
+              <p className="text-center text-sm text-gray-600 py-4">
                 ユーザーが見つかりません
               </p>
             )}

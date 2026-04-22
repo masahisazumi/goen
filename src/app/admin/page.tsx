@@ -159,7 +159,7 @@ export default function AdminDashboardPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">管理者ダッシュボード</h1>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-600">
                   {session?.user?.email}
                 </p>
               </div>
@@ -195,14 +195,14 @@ export default function AdminDashboardPage() {
                       <div className="flex items-center justify-between">
                         <h3 className="font-bold text-gray-900">{item.label}</h3>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-500">
+                          <span className="text-sm text-gray-600">
                             <span className="font-bold text-gray-900">{item.stat}</span>{" "}
                             {item.statLabel}
                           </span>
                           <ChevronRight className="h-5 w-5 text-gray-400" />
                         </div>
                       </div>
-                      <p className="text-sm text-gray-500 mt-0.5">
+                      <p className="text-sm text-gray-600 mt-0.5">
                         {item.description}
                       </p>
                     </div>

@@ -323,7 +323,7 @@ export default function MyPage() {
                       </Button>
                     </div>
                     <h2 className="mt-4 font-bold text-lg text-gray-900">{userProfile.name}</h2>
-                    <p className="text-sm text-gray-500">{userProfile.email}</p>
+                    <p className="text-sm text-gray-600">{userProfile.email}</p>
                     <div className="flex items-center gap-2 mt-2 flex-wrap justify-center">
                       <Badge variant="secondary" className="rounded-full">
                         {getRoleLabel()}
@@ -340,7 +340,7 @@ export default function MyPage() {
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 mt-2 text-sm text-gray-500">
+                    <div className="flex items-center gap-1 mt-2 text-sm text-gray-600">
                       <MapPin className="h-3.5 w-3.5" />
                       <span>{userProfile.location}</span>
                     </div>
@@ -851,7 +851,7 @@ export default function MyPage() {
                                     <h3 className="font-bold text-gray-900">
                                       {booking.space?.name || "スペース"}
                                     </h3>
-                                    <p className="text-sm text-gray-500">
+                                    <p className="text-sm text-gray-600">
                                       出店希望日: {new Date(booking.date).toLocaleDateString("ja-JP")}
                                     </p>
                                   </div>

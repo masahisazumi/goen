@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
+import { useDraft } from "@/hooks/useDraft";
+import { DraftRestoreBanner } from "@/components/ui/DraftRestoreBanner";
 import {
   ArrowLeft,
   ArrowRight,
@@ -68,6 +70,14 @@ export default function NewSpacePage() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isCheckingRole, setIsCheckingRole] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  const draftValue = { formData, selectedTags, selectedFacilities };
+  const { loadDraft, clearDraft, savedAt } = useDraft(
+    "space:new",
+    draftValue,
+    { enabled: !isCheckingRole && isOwner && !isSuccess }
+  );
 
   // 役割チェック
   useEffect(() => {
@@ -90,6 +100,37 @@ export default function NewSpacePage() {
       checkRole();
     }
   }, [session]);
+
+  // 下書き復元
+  useEffect(() => {
+    if (isCheckingRole || !isOwner) return;
+    const draft = loadDraft();
+    if (draft && draft.data) {
+      if (draft.data.formData) setFormData(draft.data.formData);
+      if (draft.data.selectedTags) setSelectedTags(draft.data.selectedTags);
+      if (draft.data.selectedFacilities)
+        setSelectedFacilities(draft.data.selectedFacilities);
+      setDraftRestored(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCheckingRole, isOwner]);
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setDraftRestored(false);
+    setFormData({
+      name: "",
+      description: "",
+      location: "",
+      address: "",
+      capacity: "",
+      price: "",
+      openingHours: "",
+      closedDays: "",
+    });
+    setSelectedTags([]);
+    setSelectedFacilities([]);
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -152,6 +193,8 @@ export default function NewSpacePage() {
         }
       }
 
+      clearDraft();
+      setDraftRestored(false);
       setIsSuccess(true);
     } catch {
       setError("登録中にエラーが発生しました");
@@ -281,6 +324,12 @@ export default function NewSpacePage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
+                <DraftRestoreBanner
+                  show={draftRestored}
+                  savedAt={savedAt}
+                  onDiscard={handleDiscardDraft}
+                />
+
                 {error && (
                   <div className="p-4 text-sm text-red-600 bg-red-50 rounded-xl border border-red-100">
                     {error}
@@ -544,6 +593,12 @@ export default function NewSpacePage() {
                     </p>
                   </CardContent>
                 </Card>
+
+                {savedAt && !isSuccess && (
+                  <p className="text-xs text-gray-500 text-right">
+                    下書きを自動保存しました（画像を除く）
+                  </p>
+                )}
 
                 {/* 送信ボタン */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">

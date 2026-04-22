@@ -19,6 +19,7 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
+  Truck,
 } from "lucide-react";
 import { Instagram, Twitter } from "lucide-react";
 import { Header } from "@/components/layout/Header";
@@ -55,6 +56,9 @@ interface StoreData {
   newsImageUrl: string | null;
   messageToOwners: string | null;
   motto: string | null;
+  vehicleLength: number | null;
+  vehicleWidth: number | null;
+  vehicleHeight: number | null;
 }
 
 export default function StoreDetailPage({
@@ -523,6 +527,49 @@ function StoreDetailContent({
                     </div>
                   </>
                 )}
+
+                {/* 車両サイズ（キッチンカーかつ値がある時のみ） */}
+                {store.category === "キッチンカー" &&
+                  (store.vehicleLength || store.vehicleWidth || store.vehicleHeight) && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                          <Truck className="h-5 w-5 text-primary" />
+                          車両サイズ
+                        </h2>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="rounded-xl bg-gray-50 p-4 text-center">
+                            <p className="text-xs text-gray-600 mb-1">全長</p>
+                            <p className="text-lg font-semibold text-gray-900">
+                              {store.vehicleLength ? `${store.vehicleLength}` : "—"}
+                              <span className="text-sm font-normal text-gray-600 ml-1">
+                                cm
+                              </span>
+                            </p>
+                          </div>
+                          <div className="rounded-xl bg-gray-50 p-4 text-center">
+                            <p className="text-xs text-gray-600 mb-1">全幅</p>
+                            <p className="text-lg font-semibold text-gray-900">
+                              {store.vehicleWidth ? `${store.vehicleWidth}` : "—"}
+                              <span className="text-sm font-normal text-gray-600 ml-1">
+                                cm
+                              </span>
+                            </p>
+                          </div>
+                          <div className="rounded-xl bg-gray-50 p-4 text-center">
+                            <p className="text-xs text-gray-600 mb-1">高さ</p>
+                            <p className="text-lg font-semibold text-gray-900">
+                              {store.vehicleHeight ? `${store.vehicleHeight}` : "—"}
+                              <span className="text-sm font-normal text-gray-600 ml-1">
+                                cm
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                 {/* 出店カレンダー */}
                 {store.calendarImageUrl && (

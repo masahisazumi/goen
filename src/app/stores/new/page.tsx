@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
+import { useDraft } from "@/hooks/useDraft";
+import { DraftRestoreBanner } from "@/components/ui/DraftRestoreBanner";
 import {
   ArrowLeft,
   ArrowRight,
@@ -19,6 +21,7 @@ import {
   ShieldAlert,
   ExternalLink,
   X,
+  Truck,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -66,6 +69,9 @@ export default function NewStorePage() {
     newsImageUrl: "",
     messageToOwners: "",
     motto: "",
+    vehicleLength: "",
+    vehicleWidth: "",
+    vehicleHeight: "",
   });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
@@ -78,6 +84,14 @@ export default function NewStorePage() {
   const [newsImagePreview, setNewsImagePreview] = useState("");
   const [isCheckingRole, setIsCheckingRole] = useState(true);
   const [isVendor, setIsVendor] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  const draftValue = { formData, selectedTags, selectedAreas, customMotto };
+  const { loadDraft, clearDraft, savedAt } = useDraft(
+    "store:new",
+    draftValue,
+    { enabled: !isCheckingRole && isVendor && !isSuccess }
+  );
 
   // 役割チェック
   useEffect(() => {
@@ -100,6 +114,48 @@ export default function NewStorePage() {
       checkRole();
     }
   }, [session]);
+
+  // 下書き復元（初回マウント時）
+  useEffect(() => {
+    if (isCheckingRole || !isVendor) return;
+    const draft = loadDraft();
+    if (draft && draft.data) {
+      if (draft.data.formData) setFormData(draft.data.formData);
+      if (draft.data.selectedTags) setSelectedTags(draft.data.selectedTags);
+      if (draft.data.selectedAreas) setSelectedAreas(draft.data.selectedAreas);
+      if (draft.data.customMotto !== undefined) setCustomMotto(draft.data.customMotto);
+      setDraftRestored(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCheckingRole, isVendor]);
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setDraftRestored(false);
+    setFormData({
+      name: "",
+      description: "",
+      category: "",
+      area: "",
+      website: "",
+      instagram: "",
+      twitter: "",
+      ownerIntro: "",
+      recommendedItems: "",
+      commitment: "",
+      calendarImageUrl: "",
+      newsText: "",
+      newsImageUrl: "",
+      messageToOwners: "",
+      motto: "",
+      vehicleLength: "",
+      vehicleWidth: "",
+      vehicleHeight: "",
+    });
+    setSelectedTags([]);
+    setSelectedAreas([]);
+    setCustomMotto("");
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -196,6 +252,8 @@ export default function NewStorePage() {
         });
       }
 
+      clearDraft();
+      setDraftRestored(false);
       setCreatedStoreId(data.id);
       setIsSuccess(true);
     } catch {
@@ -315,6 +373,12 @@ export default function NewStorePage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
+                <DraftRestoreBanner
+                  show={draftRestored}
+                  savedAt={savedAt}
+                  onDiscard={handleDiscardDraft}
+                />
+
                 {error && (
                   <div className="p-4 text-sm text-red-600 bg-red-50 rounded-xl border border-red-100">
                     {error}
@@ -391,6 +455,82 @@ export default function NewStorePage() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* 車両サイズ（キッチンカーのみ） */}
+                {formData.category === "キッチンカー" && (
+                  <Card className="rounded-2xl border-0 shadow-sm">
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Truck className="h-5 w-5 text-primary" />
+                        車両サイズ
+                      </CardTitle>
+                      <CardDescription>
+                        出店可能なスペースの判定に使用されます（任意）
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="vehicleLength">全長</Label>
+                          <div className="relative">
+                            <Input
+                              id="vehicleLength"
+                              name="vehicleLength"
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              placeholder="例: 450"
+                              value={formData.vehicleLength}
+                              onChange={handleInputChange}
+                              className="rounded-xl pr-10"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-600">
+                              cm
+                            </span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="vehicleWidth">全幅</Label>
+                          <div className="relative">
+                            <Input
+                              id="vehicleWidth"
+                              name="vehicleWidth"
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              placeholder="例: 190"
+                              value={formData.vehicleWidth}
+                              onChange={handleInputChange}
+                              className="rounded-xl pr-10"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-600">
+                              cm
+                            </span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="vehicleHeight">高さ</Label>
+                          <div className="relative">
+                            <Input
+                              id="vehicleHeight"
+                              name="vehicleHeight"
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              placeholder="例: 280"
+                              value={formData.vehicleHeight}
+                              onChange={handleInputChange}
+                              className="rounded-xl pr-10"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-600">
+                              cm
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* 出店エリア */}
                 <Card className="rounded-2xl border-0 shadow-sm">
@@ -811,6 +951,12 @@ export default function NewStorePage() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {savedAt && !isSuccess && (
+                  <p className="text-xs text-gray-500 text-right">
+                    下書きを自動保存しました（画像を除く）
+                  </p>
+                )}
 
                 {/* 送信ボタン */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">

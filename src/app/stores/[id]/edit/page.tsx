@@ -21,6 +21,7 @@ import {
   QrCode,
   Download,
   ExternalLink,
+  Truck,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -65,6 +66,19 @@ const tagOptions = [
   "初出店歓迎",
 ];
 
+function numToStr(v: unknown): string {
+  if (v === null || v === undefined || v === "") return "";
+  return String(v);
+}
+
+// 下書き値が空（"", null, undefined）ならDB本体の値を採用
+function pickVehicle(draftVal: unknown, storeVal: unknown): string {
+  if (draftVal === undefined || draftVal === null || draftVal === "") {
+    return numToStr(storeVal);
+  }
+  return numToStr(draftVal);
+}
+
 interface StoreImageData {
   id: string;
   url: string;
@@ -92,6 +106,9 @@ interface StoreData {
   newsImageUrl?: string;
   messageToOwners?: string;
   motto?: string;
+  vehicleLength?: number | null;
+  vehicleWidth?: number | null;
+  vehicleHeight?: number | null;
 }
 
 export default function EditStorePage({ params }: { params: Promise<{ id: string }> }) {
@@ -120,6 +137,9 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
     newsImageUrl: "",
     messageToOwners: "",
     motto: "",
+    vehicleLength: "",
+    vehicleWidth: "",
+    vehicleHeight: "",
   });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
@@ -163,6 +183,9 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
           newsImageUrl: d.newsImageUrl ?? store.newsImageUrl ?? "",
           messageToOwners: d.messageToOwners ?? store.messageToOwners ?? "",
           motto: d.motto ?? store.motto ?? "",
+          vehicleLength: pickVehicle(d.vehicleLength, store.vehicleLength),
+          vehicleWidth: pickVehicle(d.vehicleWidth, store.vehicleWidth),
+          vehicleHeight: pickVehicle(d.vehicleHeight, store.vehicleHeight),
         });
 
         if (draft) {
@@ -538,7 +561,7 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-gray-900">店舗を公開する</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-600">
                           オフにすると検索結果に表示されなくなります
                         </p>
                       </div>
@@ -622,6 +645,82 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* 車両サイズ（キッチンカーのみ） */}
+                {formData.category === "キッチンカー" && (
+                  <Card className="rounded-2xl border-0 shadow-sm">
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Truck className="h-5 w-5 text-primary" />
+                        車両サイズ
+                      </CardTitle>
+                      <CardDescription>
+                        出店可能なスペースの判定に使用されます（任意）
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="vehicleLength">全長</Label>
+                          <div className="relative">
+                            <Input
+                              id="vehicleLength"
+                              name="vehicleLength"
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              placeholder="例: 450"
+                              value={formData.vehicleLength}
+                              onChange={handleInputChange}
+                              className="rounded-xl pr-10"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-600">
+                              cm
+                            </span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="vehicleWidth">全幅</Label>
+                          <div className="relative">
+                            <Input
+                              id="vehicleWidth"
+                              name="vehicleWidth"
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              placeholder="例: 190"
+                              value={formData.vehicleWidth}
+                              onChange={handleInputChange}
+                              className="rounded-xl pr-10"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-600">
+                              cm
+                            </span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="vehicleHeight">高さ</Label>
+                          <div className="relative">
+                            <Input
+                              id="vehicleHeight"
+                              name="vehicleHeight"
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              placeholder="例: 280"
+                              value={formData.vehicleHeight}
+                              onChange={handleInputChange}
+                              className="rounded-xl pr-10"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-600">
+                              cm
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* 出店エリア */}
                 <Card className="rounded-2xl border-0 shadow-sm">

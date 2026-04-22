@@ -168,7 +168,7 @@ export default function ComingSoonPage() {
                       {stat.value}
                       <span className="text-xl">{stat.suffix}</span>
                     </p>
-                    <p className="mt-1 text-sm text-gray-500">{stat.label}</p>
+                    <p className="mt-1 text-sm text-gray-600">{stat.label}</p>
                   </div>
                 ))}
               </div>
@@ -387,7 +387,7 @@ export default function ComingSoonPage() {
               <span className="text-[10px] text-gray-400">出店者 × スペース マッチング</span>
             </div>
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-600">
             &copy; {new Date().getFullYear()} てんむすび. All rights reserved.
           </p>
         </div>

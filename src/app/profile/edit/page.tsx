@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
+import { useDraft } from "@/hooks/useDraft";
+import { DraftRestoreBanner } from "@/components/ui/DraftRestoreBanner";
+import { ImageCropModal } from "@/components/common/ImageCropModal";
 import {
   Camera,
   Plus,
@@ -46,6 +49,16 @@ export default function ProfileEditPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [userTypes, setUserTypes] = useState<string[]>([]);
+  const [hasStore, setHasStore] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [pendingCropFile, setPendingCropFile] = useState<File | null>(null);
+  const originalFormRef = useRef<typeof formData | null>(null);
+
+  const { loadDraft, clearDraft, savedAt } = useDraft(
+    "profile:edit",
+    formData,
+    { enabled: !isLoading && !isSuccess }
+  );
 
   // プロフィールデータを読み込む
   useEffect(() => {
@@ -54,13 +67,14 @@ export default function ProfileEditPage() {
         const res = await fetch("/api/profile");
         if (res.ok) {
           const data = await res.json();
-          setFormData({
+          const serverForm = {
             displayName: data.displayName || "",
             description: data.description || "",
             website: data.website || "",
             instagram: data.instagram || "",
             twitter: data.twitter || "",
-          });
+          };
+          originalFormRef.current = serverForm;
           // 画像を設定
           if (data.images && data.images.length > 0) {
             setProfileImage({ id: data.images[0].id, url: data.images[0].url });
@@ -68,6 +82,26 @@ export default function ProfileEditPage() {
           // ユーザータイプを設定
           if (data.userTypes) {
             setUserTypes(data.userTypes);
+            // vendorの場合、店舗登録済みかチェック
+            if (data.userTypes.includes("vendor")) {
+              try {
+                const storesRes = await fetch("/api/stores/my");
+                if (storesRes.ok) {
+                  const stores = await storesRes.json();
+                  setHasStore(Array.isArray(stores) && stores.length > 0);
+                }
+              } catch {
+                // ignore
+              }
+            }
+          }
+
+          const draft = loadDraft();
+          if (draft && draft.data) {
+            setFormData(draft.data);
+            setDraftRestored(true);
+          } else {
+            setFormData(serverForm);
           }
         }
       } catch (err) {
@@ -82,7 +116,17 @@ export default function ProfileEditPage() {
     } else if (status !== "loading") {
       setIsLoading(false);
     }
+    // loadDraft is stable (useCallback); intentionally exclude to avoid re-fetch
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status]);
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setDraftRestored(false);
+    if (originalFormRef.current) {
+      setFormData(originalFormRef.current);
+    }
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -145,6 +189,8 @@ export default function ProfileEditPage() {
         return;
       }
 
+      clearDraft();
+      setDraftRestored(false);
       setIsSuccess(true);
     } catch {
       setError("保存中にエラーが発生しました");
@@ -197,7 +243,7 @@ export default function ProfileEditPage() {
                 </p>
 
                 {/* ユーザータイプに応じた次のステップ案内 */}
-                {userTypes.includes("vendor") && (
+                {userTypes.includes("vendor") && !hasStore && (
                   <div className="mb-6 p-4 bg-orange-50 rounded-xl border border-orange-100">
                     <p className="text-sm text-orange-800 mb-3">
                       次に、マイ店舗を登録しましょう！
@@ -254,6 +300,12 @@ export default function ProfileEditPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
+                <DraftRestoreBanner
+                  show={draftRestored}
+                  savedAt={savedAt}
+                  onDiscard={handleDiscardDraft}
+                />
+
                 {error && (
                   <div className="p-4 text-sm text-red-600 bg-red-50 rounded-xl border border-red-100">
                     {error}
@@ -318,15 +370,15 @@ export default function ProfileEditPage() {
                                     setError("ファイルサイズは5MB以下にしてください");
                                     return;
                                   }
-                                  setNewImageFile(file);
-                                  setPreviewUrl(URL.createObjectURL(file));
+                                  setPendingCropFile(file);
                                 }
+                                e.target.value = "";
                               }}
                             />
                           </label>
                         )}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-gray-600">
                         <p>推奨: 正方形の画像</p>
                         <p className="text-xs mt-1">JPG, PNG, WebP, GIF（5MB以下）</p>
                       </div>
@@ -438,6 +490,12 @@ export default function ProfileEditPage() {
                   </CardContent>
                 </Card>
 
+                {savedAt && !isSuccess && (
+                  <p className="text-xs text-gray-500 text-right">
+                    下書きを自動保存しました
+                  </p>
+                )}
+
                 {/* Submit */}
                 <div className="flex flex-col sm:flex-row gap-4 pt-4">
                   <Button
@@ -475,6 +533,25 @@ export default function ProfileEditPage() {
       </main>
 
       <Footer />
+
+      <ImageCropModal
+        open={!!pendingCropFile}
+        file={pendingCropFile}
+        aspect={1}
+        cropShape="round"
+        outputWidth={512}
+        outputMime="image/jpeg"
+        outputQuality={0.9}
+        title="プロフィール画像を調整"
+        description="ドラッグ・ズームで表示範囲を調整してください"
+        onCancel={() => setPendingCropFile(null)}
+        onConfirm={(cropped) => {
+          if (previewUrl) URL.revokeObjectURL(previewUrl);
+          setNewImageFile(cropped);
+          setPreviewUrl(URL.createObjectURL(cropped));
+          setPendingCropFile(null);
+        }}
+      />
     </div>
   );
 }

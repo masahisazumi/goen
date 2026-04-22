@@ -260,7 +260,7 @@ export default function LoginPage() {
 
       {/* Footer */}
       <footer className="py-6 text-center bg-white border-t border-gray-100">
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-600">
           &copy; {new Date().getFullYear()} てんむすび. All rights reserved.
         </p>
       </footer>

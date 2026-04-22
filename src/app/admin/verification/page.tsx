@@ -206,7 +206,7 @@ export default function AdminVerificationPage() {
             </Button>
             <div>
               <h1 className="text-xl font-bold text-gray-900">本人確認管理</h1>
-              <p className="text-sm text-gray-500">管理者ダッシュボード</p>
+              <p className="text-sm text-gray-600">管理者ダッシュボード</p>
             </div>
           </div>
         </div>
@@ -325,7 +325,7 @@ export default function AdminVerificationPage() {
                           {documentTypeLabels[req.documentType] || req.documentType}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-gray-500">
+                      <TableCell className="text-sm text-gray-600">
                         {new Date(req.submittedAt).toLocaleDateString("ja-JP", {
                           year: "numeric",
                           month: "short",
@@ -409,7 +409,7 @@ export default function AdminVerificationPage() {
                   <p className="font-bold text-gray-900">
                     {selectedRequest.profile?.displayName || selectedRequest.user?.name || "名前未設定"}
                   </p>
-                  <p className="text-sm text-gray-500">{selectedRequest.user?.email}</p>
+                  <p className="text-sm text-gray-600">{selectedRequest.user?.email}</p>
                   {selectedRequest.profile?.category && (
                     <Badge variant="outline" className="rounded-full text-xs mt-1">
                       {selectedRequest.profile.category}
@@ -420,19 +420,19 @@ export default function AdminVerificationPage() {
 
               <div className="space-y-3 rounded-lg border p-4">
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">書類種別</span>
+                  <span className="text-sm text-gray-600">書類種別</span>
                   <span className="text-sm font-medium">
                     {documentTypeLabels[selectedRequest.documentType] || selectedRequest.documentType}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">申請日</span>
+                  <span className="text-sm text-gray-600">申請日</span>
                   <span className="text-sm font-medium">
                     {new Date(selectedRequest.submittedAt).toLocaleString("ja-JP")}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">ステータス</span>
+                  <span className="text-sm text-gray-600">ステータス</span>
                   <Badge
                     variant={
                       selectedRequest.status === "approved"
@@ -448,7 +448,7 @@ export default function AdminVerificationPage() {
                 </div>
                 {selectedRequest.reviewedAt && (
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">審査日</span>
+                    <span className="text-sm text-gray-600">審査日</span>
                     <span className="text-sm font-medium">
                       {new Date(selectedRequest.reviewedAt).toLocaleString("ja-JP")}
                     </span>
@@ -456,7 +456,7 @@ export default function AdminVerificationPage() {
                 )}
                 {selectedRequest.note && (
                   <div>
-                    <span className="text-sm text-gray-500">備考</span>
+                    <span className="text-sm text-gray-600">備考</span>
                     <p className="text-sm mt-1 p-2 bg-gray-50 rounded">
                       {selectedRequest.note}
                     </p>
@@ -466,7 +466,7 @@ export default function AdminVerificationPage() {
 
               {selectedRequest.documentUrl && (
                 <div>
-                  <Label className="text-sm text-gray-500">提出書類</Label>
+                  <Label className="text-sm text-gray-600">提出書類</Label>
                   <a
                     href={selectedRequest.documentUrl}
                     target="_blank"

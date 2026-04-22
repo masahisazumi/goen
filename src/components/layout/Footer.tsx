@@ -141,7 +141,7 @@ export function Footer() {
 
         {/* Bottom Bar */}
         <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-gray-800 pt-8 md:flex-row">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-600">
             &copy; {new Date().getFullYear()} てんむすび. All rights reserved.
           </p>
           <p className="text-xs text-gray-500">

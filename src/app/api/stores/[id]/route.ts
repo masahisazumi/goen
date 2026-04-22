@@ -84,7 +84,15 @@ export async function PUT(
       name, description, category, area, tags, website, instagram, twitter, isActive,
       ownerIntro, recommendedItems, commitment, calendarImageUrl, availableAreas,
       newsText, newsImageUrl, messageToOwners, motto,
+      vehicleLength, vehicleWidth, vehicleHeight,
     } = fields;
+
+    const toInt = (v: unknown): number | null | undefined => {
+      if (v === undefined) return undefined;
+      if (v === null || v === "") return null;
+      const n = typeof v === "number" ? v : parseInt(String(v), 10);
+      return Number.isFinite(n) && n >= 0 ? n : null;
+    };
 
     // 下書き保存: draftDataにJSONとして保存、公開データは変更しない
     if (saveMode === "draft") {
@@ -96,6 +104,17 @@ export async function PUT(
         availableAreas: availableAreas ? JSON.stringify(availableAreas) : existingStore.availableAreas,
         newsText, newsImageUrl, messageToOwners, motto,
       };
+
+      // 車両サイズは空文字列だと既存値を上書きしてしまうため、値がある時のみ保存
+      if (vehicleLength !== undefined && vehicleLength !== null && vehicleLength !== "") {
+        draftData.vehicleLength = vehicleLength;
+      }
+      if (vehicleWidth !== undefined && vehicleWidth !== null && vehicleWidth !== "") {
+        draftData.vehicleWidth = vehicleWidth;
+      }
+      if (vehicleHeight !== undefined && vehicleHeight !== null && vehicleHeight !== "") {
+        draftData.vehicleHeight = vehicleHeight;
+      }
 
       const store = await prisma.store.update({
         where: { id },
@@ -133,6 +152,9 @@ export async function PUT(
         newsImageUrl,
         messageToOwners,
         motto,
+        vehicleLength: toInt(vehicleLength),
+        vehicleWidth: toInt(vehicleWidth),
+        vehicleHeight: toInt(vehicleHeight),
         draftData: null, // 下書きをクリア
       },
     });

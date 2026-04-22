@@ -147,6 +147,11 @@ model Store {
   instagram   String?
   twitter     String?
 
+  // キッチンカー車両サイズ（cm）
+  vehicleLength Int?
+  vehicleWidth  Int?
+  vehicleHeight Int?
+
   // QRコード用トークン
   qrToken     String?  @unique
 

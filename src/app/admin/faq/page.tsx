@@ -277,7 +277,7 @@ export default function AdminFaqPage() {
               </Button>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">FAQ管理</h1>
-                <p className="text-sm text-gray-500">管理者ダッシュボード</p>
+                <p className="text-sm text-gray-600">管理者ダッシュボード</p>
               </div>
             </div>
             <Button onClick={openCreateDialog}>
@@ -390,7 +390,7 @@ export default function AdminFaqPage() {
                           <p className="font-medium text-gray-900 line-clamp-1">
                             {item.question}
                           </p>
-                          <p className="text-sm text-gray-500 line-clamp-1 mt-0.5">
+                          <p className="text-sm text-gray-600 line-clamp-1 mt-0.5">
                             {item.answer}
                           </p>
                         </div>
@@ -466,7 +466,7 @@ export default function AdminFaqPage() {
         <div className="mt-6 text-center">
           <Link
             href="/faq"
-            className="text-sm text-gray-500 hover:text-gray-700 underline"
+            className="text-sm text-gray-600 hover:text-gray-700 underline"
           >
             公開FAQページを確認する
           </Link>
@@ -540,7 +540,7 @@ export default function AdminFaqPage() {
                 <Label htmlFor="faq-published" className="font-medium">
                   公開する
                 </Label>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-600">
                   オフにすると下書き状態になります
                 </p>
               </div>

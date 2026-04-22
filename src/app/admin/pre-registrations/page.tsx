@@ -162,7 +162,7 @@ export default function AdminPreRegistrationsPage() {
               </Button>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">先行登録一覧</h1>
-                <p className="text-sm text-gray-500">管理者ダッシュボード</p>
+                <p className="text-sm text-gray-600">管理者ダッシュボード</p>
               </div>
             </div>
             <Button

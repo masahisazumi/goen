@@ -121,6 +121,9 @@ function ResetPasswordContent() {
                       )}
                     </Button>
                   </div>
+                  <p className="text-sm text-gray-800">
+                    半角英数字・記号を組み合わせて8文字以上で入力してください
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -213,7 +216,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       <footer className="py-6 text-center bg-white border-t border-gray-100">
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-600">
           &copy; {new Date().getFullYear()} てんむすび. All rights reserved.
         </p>
       </footer>

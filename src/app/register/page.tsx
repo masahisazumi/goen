@@ -59,6 +59,12 @@ function RegisterContent() {
     e.preventDefault();
     setError("");
 
+    // Validate password length
+    if (formData.password.length < 8) {
+      setError("パスワードは8文字以上で入力してください");
+      return;
+    }
+
     // Validate passwords match
     if (formData.password !== formData.passwordConfirm) {
       setError("パスワードが一致しません");
@@ -247,6 +253,9 @@ function RegisterContent() {
                         )}
                       </Button>
                     </div>
+                    <p className="text-sm text-gray-800">
+                      半角英数字・記号を組み合わせて8文字以上で入力してください
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -387,7 +396,7 @@ function RegisterContent() {
 
       {/* Footer */}
       <footer className="py-6 text-center bg-white border-t border-gray-100">
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-600">
           &copy; {new Date().getFullYear()} てんむすび. All rights reserved.
         </p>
       </footer>
