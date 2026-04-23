@@ -261,6 +261,9 @@ async function main() {
     if (!colNames.has("motto")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "motto" TEXT');
     if (!colNames.has("qrToken")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "qrToken" TEXT');
     if (!colNames.has("draftData")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "draftData" TEXT');
+    if (!colNames.has("vehicleLength")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "vehicleLength" INTEGER');
+    if (!colNames.has("vehicleWidth")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "vehicleWidth" INTEGER');
+    if (!colNames.has("vehicleHeight")) alterStatements.push('ALTER TABLE "Store" ADD COLUMN "vehicleHeight" INTEGER');
   }
 
   // Check StoreImage table for missing columns

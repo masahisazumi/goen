@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "build:prod": "npm run migrate:prod && prisma generate && next build",
+    "migrate:prod": "tsx prisma/migrate-prod.ts",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate"
