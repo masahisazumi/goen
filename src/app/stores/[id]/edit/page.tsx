@@ -152,11 +152,11 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [isLoadingQr, setIsLoadingQr] = useState(false);
 
-  // 店舗データを取得
+  // 店舗データを取得（編集画面はオーナー用なので下書き画像も含めて取得）
   useEffect(() => {
     const fetchStore = async () => {
       try {
-        const res = await fetch(`/api/stores/${id}`);
+        const res = await fetch(`/api/stores/${id}?draft=true`);
         if (!res.ok) {
           setError("店舗が見つかりません");
           return;
