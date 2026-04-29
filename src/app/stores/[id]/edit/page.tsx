@@ -33,6 +33,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { AREAS, MOTTO_OPTIONS } from "@/lib/constants";
+import { compressImage } from "@/lib/imageCompress";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -268,15 +269,12 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
     file: File,
     fieldName: "calendarImageUrl" | "newsImageUrl"
   ) => {
-    if (file.size > 5 * 1024 * 1024) {
-      setError("ファイルサイズは5MB以下にしてください");
-      return;
-    }
-    const uploadData = new FormData();
-    uploadData.append("file", file);
-    uploadData.append("type", "store");
-    uploadData.append("targetId", id);
     try {
+      const compressed = await compressImage(file);
+      const uploadData = new FormData();
+      uploadData.append("file", compressed);
+      uploadData.append("type", "store");
+      uploadData.append("targetId", id);
       const res = await fetch("/api/upload", { method: "POST", body: uploadData });
       if (res.ok) {
         const data = await res.json();
@@ -284,7 +282,8 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
       } else {
         setError("画像のアップロードに失敗しました");
       }
-    } catch {
+    } catch (err) {
+      console.error("[upload]", err);
       setError("画像のアップロードに失敗しました");
     }
   };
@@ -323,22 +322,33 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
         return;
       }
 
-      // Upload new images
+      // 新規画像アップロード（圧縮+個別エラー処理。失敗しても保存自体は成功扱い）
+      let failedCount = 0;
       if (newImageFiles.length > 0) {
         for (const file of newImageFiles) {
-          const uploadData = new FormData();
-          uploadData.append("file", file);
-          uploadData.append("type", "store");
-          uploadData.append("targetId", id);
-          if (saveMode === "draft") {
-            uploadData.append("isDraft", "true");
+          try {
+            const compressed = await compressImage(file);
+            const uploadData = new FormData();
+            uploadData.append("file", compressed);
+            uploadData.append("type", "store");
+            uploadData.append("targetId", id);
+            if (saveMode === "draft") {
+              uploadData.append("isDraft", "true");
+            }
+            const res = await fetch("/api/upload", { method: "POST", body: uploadData });
+            if (!res.ok) failedCount++;
+          } catch (err) {
+            console.error("[upload]", err);
+            failedCount++;
           }
-          await fetch("/api/upload", { method: "POST", body: uploadData });
         }
         setNewImageFiles([]);
         setNewImagePreviews([]);
       }
 
+      if (failedCount > 0) {
+        setError(`${failedCount}枚の画像アップロードに失敗しました。通信が安定している環境で再度お試しください。`);
+      }
       setIsSuccess(true);
     } catch (err) {
       console.error("Store save error:", err);
@@ -901,10 +911,6 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                if (file.size > 5 * 1024 * 1024) {
-                                  setError("ファイルサイズは5MB以下にしてください");
-                                  return;
-                                }
                                 setNewImageFiles((prev) => [...prev, file]);
                                 setNewImagePreviews((prev) => [...prev, URL.createObjectURL(file)]);
                               }
@@ -914,7 +920,7 @@ export default function EditStorePage({ params }: { params: Promise<{ id: string
                       )}
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      JPG, PNG, WebP, GIF（各5MB以下）
+                      JPG, PNG, WebP, GIF（送信時に自動で軽量化されます）
                     </p>
                   </CardContent>
                 </Card>

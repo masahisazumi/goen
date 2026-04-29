@@ -5,23 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
-import imageCompression from "browser-image-compression";
+import { compressImage } from "@/lib/imageCompress";
 import { useDraft } from "@/hooks/useDraft";
 import { DraftRestoreBanner } from "@/components/ui/DraftRestoreBanner";
-
-async function compressImage(file: File): Promise<File> {
-  try {
-    const compressed = await imageCompression(file, {
-      maxSizeMB: 1,
-      maxWidthOrHeight: 1600,
-      useWebWorker: true,
-    });
-    return compressed;
-  } catch (e) {
-    console.warn("[compress] failed, using original:", e);
-    return file;
-  }
-}
 import {
   ArrowLeft,
   ArrowRight,
@@ -731,10 +717,6 @@ export default function NewStorePage() {
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                if (file.size > 5 * 1024 * 1024) {
-                                  setError("ファイルサイズは5MB以下にしてください");
-                                  return;
-                                }
                                 setImageFiles((prev) => [...prev, file]);
                                 setImagePreviews((prev) => [...prev, URL.createObjectURL(file)]);
                               }
@@ -744,7 +726,7 @@ export default function NewStorePage() {
                       )}
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      JPG, PNG, WebP, GIF（各5MB以下）
+                      JPG, PNG, WebP, GIF（送信時に自動で軽量化されます）
                     </p>
                   </CardContent>
                 </Card>
@@ -838,10 +820,6 @@ export default function NewStorePage() {
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                              if (file.size > 5 * 1024 * 1024) {
-                                setError("ファイルサイズは5MB以下にしてください");
-                                return;
-                              }
                               setCalendarImageFile(file);
                               setCalendarImagePreview(URL.createObjectURL(file));
                             }
@@ -926,10 +904,6 @@ export default function NewStorePage() {
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                              if (file.size > 5 * 1024 * 1024) {
-                                setError("ファイルサイズは5MB以下にしてください");
-                                return;
-                              }
                               setNewsImageFile(file);
                               setNewsImagePreview(URL.createObjectURL(file));
                             }
