@@ -233,6 +233,42 @@ async function main() {
       "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT "Subscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
     )`,
+    `CREATE TABLE IF NOT EXISTS "CheckIn" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "userId" TEXT NOT NULL,
+      "storeId" TEXT NOT NULL,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "CheckIn_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+      CONSTRAINT "CheckIn_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )`,
+    `CREATE TABLE IF NOT EXISTS "StoreReview" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "userId" TEXT NOT NULL,
+      "storeId" TEXT NOT NULL,
+      "rating" INTEGER NOT NULL,
+      "content" TEXT,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "StoreReview_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+      CONSTRAINT "StoreReview_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )`,
+    `CREATE TABLE IF NOT EXISTS "StoreFavorite" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "userId" TEXT NOT NULL,
+      "storeId" TEXT NOT NULL,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "StoreFavorite_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+      CONSTRAINT "StoreFavorite_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )`,
+    `CREATE TABLE IF NOT EXISTS "PointTransaction" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "userId" TEXT NOT NULL,
+      "points" INTEGER NOT NULL,
+      "type" TEXT NOT NULL,
+      "refId" TEXT,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "PointTransaction_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )`,
   ];
 
   // Add missing columns to existing tables
@@ -244,6 +280,7 @@ async function main() {
     const colNames = new Set(userCols.rows.map(r => r.name as string));
     if (!colNames.has("notificationSettings")) alterStatements.push('ALTER TABLE "User" ADD COLUMN "notificationSettings" TEXT');
     if (!colNames.has("stripeCustomerId")) alterStatements.push('ALTER TABLE "User" ADD COLUMN "stripeCustomerId" TEXT');
+    if (!colNames.has("totalPoints")) alterStatements.push('ALTER TABLE "User" ADD COLUMN "totalPoints" INTEGER NOT NULL DEFAULT 0');
   }
 
   // Check Store table for missing columns
@@ -313,6 +350,12 @@ async function main() {
     'CREATE UNIQUE INDEX IF NOT EXISTS "Subscription_userId_key" ON "Subscription"("userId")',
     'CREATE UNIQUE INDEX IF NOT EXISTS "Subscription_stripeSubscriptionId_key" ON "Subscription"("stripeSubscriptionId")',
     'CREATE UNIQUE INDEX IF NOT EXISTS "Store_qrToken_key" ON "Store"("qrToken")',
+    'CREATE INDEX IF NOT EXISTS "CheckIn_userId_storeId_idx" ON "CheckIn"("userId", "storeId")',
+    'CREATE INDEX IF NOT EXISTS "CheckIn_storeId_idx" ON "CheckIn"("storeId")',
+    'CREATE UNIQUE INDEX IF NOT EXISTS "StoreReview_userId_storeId_key" ON "StoreReview"("userId", "storeId")',
+    'CREATE INDEX IF NOT EXISTS "StoreReview_storeId_idx" ON "StoreReview"("storeId")',
+    'CREATE UNIQUE INDEX IF NOT EXISTS "StoreFavorite_userId_storeId_key" ON "StoreFavorite"("userId", "storeId")',
+    'CREATE INDEX IF NOT EXISTS "PointTransaction_userId_idx" ON "PointTransaction"("userId")',
   ];
 
   for (const sql of indexes) {

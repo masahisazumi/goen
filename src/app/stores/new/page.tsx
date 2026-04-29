@@ -256,8 +256,10 @@ export default function NewStorePage() {
       setDraftRestored(false);
       setCreatedStoreId(data.id);
       setIsSuccess(true);
-    } catch {
-      setError("登録中にエラーが発生しました");
+    } catch (e) {
+      console.error("[store-register]", e);
+      const msg = e instanceof Error ? e.message : "不明なエラー";
+      setError(`登録中にエラーが発生しました: ${msg}`);
     } finally {
       setIsLoading(false);
     }
