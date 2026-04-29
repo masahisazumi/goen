@@ -5,8 +5,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
+import imageCompression from "browser-image-compression";
 import { useDraft } from "@/hooks/useDraft";
 import { DraftRestoreBanner } from "@/components/ui/DraftRestoreBanner";
+
+async function compressImage(file: File): Promise<File> {
+  try {
+    const compressed = await imageCompression(file, {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1600,
+      useWebWorker: true,
+    });
+    return compressed;
+  } catch (e) {
+    console.warn("[compress] failed, using original:", e);
+    return file;
+  }
+}
 import {
   ArrowLeft,
   ArrowRight,
@@ -52,6 +67,7 @@ export default function NewStorePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdStoreId, setCreatedStoreId] = useState<string | null>(null);
+  const [uploadFailedCount, setUploadFailedCount] = useState(0);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     name: "",
@@ -215,46 +231,66 @@ export default function NewStorePage() {
         return;
       }
 
-      // Upload images
+      // 画像アップロード（圧縮してから個別に送信、失敗しても登録は成功させる）
+      let failedCount = 0;
+      const uploadOne = async (
+        file: File,
+        targetId: string
+      ): Promise<{ ok: true; url: string } | { ok: false }> => {
+        try {
+          const compressed = await compressImage(file);
+          const uploadData = new FormData();
+          uploadData.append("file", compressed);
+          uploadData.append("type", "store");
+          uploadData.append("targetId", targetId);
+          const res = await fetch("/api/upload", { method: "POST", body: uploadData });
+          if (!res.ok) return { ok: false };
+          const result = await res.json();
+          return { ok: true, url: result.url };
+        } catch (err) {
+          console.error("[upload]", err);
+          return { ok: false };
+        }
+      };
+
       if (imageFiles.length > 0 && data.id) {
         for (const file of imageFiles) {
-          const uploadData = new FormData();
-          uploadData.append("file", file);
-          uploadData.append("type", "store");
-          uploadData.append("targetId", data.id);
-          await fetch("/api/upload", { method: "POST", body: uploadData });
+          const result = await uploadOne(file, data.id);
+          if (!result.ok) failedCount++;
         }
       }
 
-      // Upload calendar/news images and update store
+      // カレンダー画像・お知らせ画像
       const imageUpdates: Record<string, string> = {};
       for (const [file, field] of [
         [calendarImageFile, "calendarImageUrl"],
         [newsImageFile, "newsImageUrl"],
       ] as const) {
         if (file && data.id) {
-          const uploadData = new FormData();
-          uploadData.append("file", file);
-          uploadData.append("type", "store");
-          uploadData.append("targetId", data.id);
-          const uploadRes = await fetch("/api/upload", { method: "POST", body: uploadData });
-          if (uploadRes.ok) {
-            const uploadResult = await uploadRes.json();
-            imageUpdates[field] = uploadResult.url;
+          const result = await uploadOne(file, data.id);
+          if (result.ok) {
+            imageUpdates[field] = result.url;
+          } else {
+            failedCount++;
           }
         }
       }
       if (Object.keys(imageUpdates).length > 0 && data.id) {
-        await fetch(`/api/stores/${data.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(imageUpdates),
-        });
+        try {
+          await fetch(`/api/stores/${data.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(imageUpdates),
+          });
+        } catch (err) {
+          console.error("[store-update]", err);
+        }
       }
 
       clearDraft();
       setDraftRestored(false);
       setCreatedStoreId(data.id);
+      setUploadFailedCount(failedCount);
       setIsSuccess(true);
     } catch (e) {
       console.error("[store-register]", e);
@@ -341,6 +377,12 @@ export default function NewStorePage() {
                   店舗情報が下書きとして登録されました。
                   プレビューで確認後、編集画面から公開できます。
                 </p>
+                {uploadFailedCount > 0 && (
+                  <div className="mb-6 p-4 text-sm text-amber-800 bg-amber-50 rounded-xl border border-amber-200 text-left">
+                    画像のうち {uploadFailedCount} 枚のアップロードに失敗しました。
+                    通信が安定している環境で、編集画面から再度アップロードしてください。
+                  </div>
+                )}
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   {createdStoreId && (
                     <Button
