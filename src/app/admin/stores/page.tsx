@@ -156,8 +156,13 @@ export default function AdminStoresPage() {
   const filteredStores = stores.filter((s) => {
     if (filter === "assigned") return s.ownerId !== null;
     if (filter === "unassigned") return s.ownerId === null;
+    if (filter === "active") return s.isActive;
+    if (filter === "inactive") return !s.isActive;
     return true;
   });
+
+  const activeCount = stores.filter((s) => s.isActive).length;
+  const inactiveCount = stores.length - activeCount;
 
   // Create store
   const handleCreate = async () => {
@@ -298,7 +303,7 @@ export default function AdminStoresPage() {
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-3 md:grid-cols-5 gap-4 mb-6">
           <Card className="border-0 shadow-sm rounded-2xl">
             <CardContent className="p-4 text-center">
               <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
@@ -317,6 +322,18 @@ export default function AdminStoresPage() {
               <p className="text-sm text-gray-600">未紐付</p>
             </CardContent>
           </Card>
+          <Card className="border-0 shadow-sm rounded-2xl">
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-blue-600">{activeCount}</p>
+              <p className="text-sm text-gray-600">公開中</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm rounded-2xl">
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-gray-500">{inactiveCount}</p>
+              <p className="text-sm text-gray-600">非公開</p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Actions */}
@@ -324,13 +341,15 @@ export default function AdminStoresPage() {
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-gray-500" />
             <Select value={filter} onValueChange={setFilter}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[160px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">すべて</SelectItem>
                 <SelectItem value="assigned">紐付済</SelectItem>
                 <SelectItem value="unassigned">未紐付</SelectItem>
+                <SelectItem value="active">公開中</SelectItem>
+                <SelectItem value="inactive">非公開</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -349,6 +368,7 @@ export default function AdminStoresPage() {
                 <TableHead className="hidden md:table-cell">カテゴリ</TableHead>
                 <TableHead className="hidden md:table-cell">エリア</TableHead>
                 <TableHead>オーナー</TableHead>
+                <TableHead>状態</TableHead>
                 <TableHead className="hidden md:table-cell">作成日</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
@@ -356,7 +376,7 @@ export default function AdminStoresPage() {
             <TableBody>
               {filteredStores.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-gray-500">
+                  <TableCell colSpan={7} className="text-center py-12 text-gray-500">
                     <Store className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                     <p>店舗がありません</p>
                   </TableCell>
@@ -379,6 +399,17 @@ export default function AdminStoresPage() {
                       ) : (
                         <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">
                           未割当
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {store.isActive ? (
+                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+                          公開中
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-gray-600">
+                          非公開
                         </Badge>
                       )}
                     </TableCell>
